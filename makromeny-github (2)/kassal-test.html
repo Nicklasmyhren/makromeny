@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kassal-test — ekte produktdata</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14241c;--spruce:#1e4d3a;--spruce-2:#2e6b50;--paper:#f1f3ee;--card:#fff;
+    --kroner:#b4632a;--line:#dde1d8;--muted:#6b7a70;--karbo:#c9a24b;--fett:#b08368;
+    --shadow:0 1px 2px rgba(20,36,28,.05),0 8px 24px rgba(20,36,28,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .wrap{max-width:760px;margin:0 auto;padding:30px 20px 60px;}
+  h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;letter-spacing:-.02em;margin:0 0 6px;color:var(--spruce);}
+  .lead{color:var(--muted);font-size:13.5px;margin:0 0 22px;border-bottom:1px solid var(--line);padding-bottom:16px;}
+  .searchrow{display:flex;gap:8px;margin-bottom:8px;}
+  input{flex:1;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px 14px;font:inherit;font-size:15px;color:var(--ink);}
+  input:focus{outline:2px solid var(--spruce-2);outline-offset:2px;}
+  button{cursor:pointer;border:none;border-radius:10px;background:var(--spruce);color:#fff;font:inherit;font-weight:600;font-size:15px;padding:12px 20px;transition:background .15s;}
+  button:hover{background:#173d2e;}
+  button[disabled]{opacity:.7;cursor:default;}
+  .hint{font-size:12px;color:var(--muted);margin:0 0 22px;}
+  .hint b{color:var(--spruce-2);}
+  .status{font-size:14px;color:var(--spruce-2);padding:14px 0;}
+  .err{font-size:14px;color:var(--kroner);background:#fbf6ee;border:1px solid #ecdcc4;border-radius:10px;padding:13px 15px;}
+  .results{display:flex;flex-direction:column;gap:12px;}
+  .prod{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:14px;}
+  .prod img{width:54px;height:54px;object-fit:contain;border-radius:8px;background:#fbfcfa;border:1px solid var(--line);flex:0 0 54px;}
+  .prod .body{flex:1;min-width:0;}
+  .prod .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px;}
+  .prod .name{font-weight:600;font-size:15px;}
+  .prod .price{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:16px;color:var(--kroner);white-space:nowrap;}
+  .prod .sub{font-size:12px;color:var(--muted);margin-bottom:10px;}
+  .prod .store{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.04em;background:#f4f8f3;border:1px solid #d7e6d6;color:var(--spruce);border-radius:6px;padding:1px 7px;margin-right:7px;}
+  .macros{display:flex;gap:16px;flex-wrap:wrap;border-top:1px dashed var(--line);padding-top:9px;}
+  .m{display:flex;flex-direction:column;}
+  .m .v{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px;line-height:1;}
+  .m .k{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:3px;}
+  .m.p .v{color:var(--spruce-2);} .m.k2 .v{color:var(--karbo);} .m.f .v{color:var(--fett);}
+  .per{font-size:10.5px;color:var(--muted);margin-left:auto;align-self:center;}
+  footer{margin-top:26px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;}
+  footer b{color:var(--spruce-2);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Kassal-test</h1>
+  <p class="lead">Et lite verktøy for å bekrefte at vi henter <b>ekte</b> produktnavn, pris og næringsinnhold fra Kassalapp — byggeklossene til den ekte databasen. Søk på en vare, så ser du hva som kommer tilbake.</p>
+
+  <div class="searchrow">
+    <input id="q" type="text" placeholder="F.eks. kyllingfilet, jasminris, laksefilet…" value="kyllingfilet" />
+    <button id="go">Søk</button>
+  </div>
+  <p class="hint">Tips: prøv råvarer fra menyen — <b>kyllingfilet</b>, <b>kjøttdeig</b>, <b>brokkoli</b>, <b>jasminris</b>.</p>
+
+  <div id="out"></div>
+
+  <footer>Når dette viser ekte tall, er neste steg å mappe ett representativt produkt per råvare inn i <b>ING</b>-tabellen — da går hele appen fra dummy til ekte data.</footer>
+</div>
+
+<script>
+const out=document.getElementById("out"), q=document.getElementById("q"), go=document.getElementById("go");
+function macro(v,unit){ return v==null?"—":Math.round(v*10)/10+(unit||""); }
+function fmtWeight(w,u){ if(w==null)return ""; if(u==="piece")return w+" stk"; return w+" "+(u||"g"); }
+
+async function search(){
+  const term=q.value.trim();
+  if(!term) return;
+  go.disabled=true;
+  out.innerHTML=`<div class="status">Henter fra Kassalapp…</div>`;
+  try{
+    const res=await fetch("/.netlify/functions/kassal?search="+encodeURIComponent(term));
+    const data=await res.json();
+    if(!res.ok||data.error){
+      const head=(data.error||"Feil")+(data.status?" ("+data.status+")":"");
+      let det="";
+      if(data.detail){ const d=typeof data.detail==="string"?data.detail:JSON.stringify(data.detail,null,2); det=`<br><br><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;white-space:pre-wrap;">${escapeHtml(d.slice(0,600))}</span>`; }
+      out.innerHTML=`<div class="err"><b>${escapeHtml(head)}</b>${det}<br><br>Hvis det nevner KASSAL_API_KEY: sjekk at nøkkelen er lagt inn i Netlify og at du har deployet på nytt.</div>`;
+      return;
+    }
+    if(!data.products||!data.products.length){ out.innerHTML=`<div class="status">Ingen treff på «${term}».</div>`; return; }
+    out.innerHTML=`<div class="results">`+data.products.map(p=>`
+      <div class="prod">
+        ${p.image?`<img src="${p.image}" alt="" onerror="this.style.display='none'"/>`:""}
+        <div class="body">
+          <div class="top"><span class="name">${escapeHtml(p.name||"")}</span><span class="price">${p.price!=null?p.price+" kr":"—"}</span></div>
+          <div class="sub">${p.store?`<span class="store">${escapeHtml(p.store)}</span>`:""}${fmtWeight(p.weight,p.weightUnit)}${p.unitPrice!=null?" · "+p.unitPrice+" kr/enhet":""}</div>
+          <div class="macros">
+            <div class="m"><span class="v num">${macro(p.kcal)}</span><span class="k">kcal</span></div>
+            <div class="m p"><span class="v num">${macro(p.protein,"")} g</span><span class="k">Protein</span></div>
+            <div class="m k2"><span class="v num">${macro(p.carbs,"")} g</span><span class="k">Karbo</span></div>
+            <div class="m f"><span class="v num">${macro(p.fat,"")} g</span><span class="k">Fett</span></div>
+            <span class="per">per 100 g</span>
+          </div>
+        </div>
+      </div>`).join("")+`</div>`;
+  }catch(e){
+    out.innerHTML=`<div class="err">${escapeHtml(String(e.message||e))}<br><br>Sjekk at <b>KASSAL_API_KEY</b> er lagt inn i Netlify og at du har deployet på nytt etterpå.</div>`;
+  }finally{ go.disabled=false; }
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+go.addEventListener("click",search);
+q.addEventListener("keydown",e=>{if(e.key==="Enter")search();});
+</script>
+</body>
+</html>
