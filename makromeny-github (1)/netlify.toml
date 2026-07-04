@@ -1,0 +1,9 @@
+# Netlify-konfig for MakroMeny
+# Publiserer mappa som den er (ingen byggesteg) og forteller hvor funksjonene ligger.
+
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"

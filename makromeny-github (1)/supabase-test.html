@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supabase-test — innlogging</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#14241c;--spruce:#1e4d3a;--spruce-2:#2e6b50;--paper:#f1f3ee;--card:#fff;--kroner:#b4632a;--line:#dde1d8;--muted:#6b7a70;--amber:#b8893a;--shadow:0 1px 2px rgba(20,36,28,.05),0 8px 24px rgba(20,36,28,.06);}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .num{font-family:'IBM Plex Mono',monospace;}
+  .wrap{max-width:620px;margin:0 auto;padding:30px 20px 70px;}
+  h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;letter-spacing:-.02em;margin:0 0 6px;color:var(--spruce);}
+  .lead{color:var(--muted);font-size:13.5px;margin:0 0 22px;border-bottom:1px solid var(--line);padding-bottom:16px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:18px;margin-bottom:16px;}
+  .card.off{opacity:.5;pointer-events:none;}
+  .step{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--spruce-2);margin:0 0 12px;}
+  label{display:block;font-size:12.5px;font-weight:600;margin:0 0 5px;}
+  input{width:100%;border:1px solid var(--line);border-radius:9px;background:#fbfcfa;padding:10px 12px;font:inherit;font-size:13.5px;color:var(--ink);margin-bottom:12px;}
+  input:focus{outline:2px solid var(--spruce-2);outline-offset:1px;}
+  button{cursor:pointer;border:none;border-radius:9px;background:var(--spruce);color:#fff;font:inherit;font-weight:600;font-size:14px;padding:11px 18px;transition:background .15s;}
+  button:hover{background:#173d2e;} button[disabled]{opacity:.6;cursor:default;}
+  button.ghost{background:#fff;color:var(--spruce);border:1px solid var(--line);}
+  button.ghost:hover{background:#f4f8f3;border-color:var(--spruce-2);}
+  .row{display:flex;gap:8px;flex-wrap:wrap;}
+  .msg{margin-top:12px;font-size:13px;border-radius:9px;padding:11px 13px;display:none;}
+  .msg.ok{display:block;background:#f4f8f3;border:1px solid #d7e6d6;color:var(--spruce);}
+  .msg.err{display:block;background:#fbf6ee;border:1px solid #ecdcc4;color:var(--kroner);}
+  .msg.info{display:block;background:#f0f1ee;border:1px solid var(--line);color:var(--muted);}
+  .who{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--spruce-2);margin-bottom:12px;}
+  footer{margin-top:10px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;}
+  footer b{color:var(--spruce-2);}
+  code{font-family:'IBM Plex Mono',monospace;font-size:12px;background:#f0f1ee;padding:1px 5px;border-radius:4px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Supabase-test</h1>
+  <p class="lead">Beviser fundamentet: at appen kan koble til Supabase og at registrering + innlogging med e-post og passord virker. Lim inn Prosjekt-URL og den publiserbare nøkkelen din, koble til, og prøv å lage en bruker.</p>
+
+  <div class="card" id="c1">
+    <p class="step">Steg 1 — koble til</p>
+    <label>Prosjekt-URL</label>
+    <input id="url" type="text" placeholder="https://xxxx.supabase.co" autocomplete="off" />
+    <label>Publiserbar nøkkel (sb_publishable_… eller anon)</label>
+    <input id="key" type="text" placeholder="sb_publishable_…" autocomplete="off" />
+    <button id="connect">Koble til</button>
+    <div class="msg" id="m1"></div>
+  </div>
+
+  <div class="card off" id="c2">
+    <p class="step">Steg 2 — test innlogging</p>
+    <div class="who" id="who" style="display:none"></div>
+    <label>E-post</label>
+    <input id="email" type="email" placeholder="deg@epost.no" autocomplete="off" />
+    <label>Passord (minst 6 tegn)</label>
+    <input id="pw" type="password" placeholder="••••••" autocomplete="off" />
+    <div class="row">
+      <button id="signup">Registrer ny bruker</button>
+      <button id="signin" class="ghost">Logg inn</button>
+      <button id="signout" class="ghost" style="display:none">Logg ut</button>
+    </div>
+    <div class="msg" id="m2"></div>
+  </div>
+
+  <footer>Tips: vil du logge inn rett etter registrering, slå av e-postbekreftelse i Supabase under <b>Authentication → Sign In / Providers → Email</b> («Confirm email» av). Ellers må du klikke bekreftelseslenken i e-posten først.</footer>
+</div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+let supabase=null;
+const $=id=>document.getElementById(id);
+function show(el,type,html){ el.className="msg "+type; el.innerHTML=html; }
+
+$("connect").addEventListener("click",async()=>{
+  const url=$("url").value.trim(), key=$("key").value.trim();
+  if(!url||!key){ show($("m1"),"err","Fyll inn både URL og nøkkel."); return; }
+  try{
+    supabase=createClient(url,key);
+    // bekreft tilkobling ved å hente økt-status
+    const { error }=await supabase.auth.getSession();
+    if(error) throw error;
+    show($("m1"),"ok","✓ Koblet til Supabase. Gå videre til steg 2.");
+    $("c2").classList.remove("off");
+    supabase.auth.onAuthStateChange((_e,session)=>updateUser(session?.user||null));
+    const { data }=await supabase.auth.getUser();
+    updateUser(data?.user||null);
+  }catch(e){
+    show($("m1"),"err","Klarte ikke å koble til: "+(e.message||e)+". Sjekk at URL og nøkkel er riktige.");
+  }
+});
+
+function updateUser(user){
+  if(user){
+    $("who").style.display="block";
+    $("who").textContent="Innlogget som: "+user.email;
+    $("signout").style.display="inline-block";
+  }else{
+    $("who").style.display="none";
+    $("signout").style.display="none";
+  }
+}
+
+$("signup").addEventListener("click",async()=>{
+  if(!supabase) return;
+  const email=$("email").value.trim(), password=$("pw").value;
+  try{
+    const { data, error }=await supabase.auth.signUp({ email, password });
+    if(error) throw error;
+    if(data.session){ show($("m2"),"ok","✓ Bruker opprettet og innlogget!"); }
+    else { show($("m2"),"info","Bruker opprettet. Sjekk e-posten for bekreftelse — eller slå av «Confirm email» i Supabase for å logge inn direkte."); }
+  }catch(e){ show($("m2"),"err","Feil ved registrering: "+(e.message||e)); }
+});
+
+$("signin").addEventListener("click",async()=>{
+  if(!supabase) return;
+  const email=$("email").value.trim(), password=$("pw").value;
+  try{
+    const { data, error }=await supabase.auth.signInWithPassword({ email, password });
+    if(error) throw error;
+    show($("m2"),"ok","✓ Innlogget som "+data.user.email+"!");
+  }catch(e){ show($("m2"),"err","Feil ved innlogging: "+(e.message||e)); }
+});
+
+$("signout").addEventListener("click",async()=>{
+  if(!supabase) return;
+  await supabase.auth.signOut();
+  show($("m2"),"info","Logget ut.");
+});
+</script>
+</body>
+</html>

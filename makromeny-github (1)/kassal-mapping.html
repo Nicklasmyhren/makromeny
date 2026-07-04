@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kassal-mapping — velg riktig produkt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#14241c;--spruce:#1e4d3a;--spruce-2:#2e6b50;--paper:#f1f3ee;--card:#fff;--kroner:#b4632a;--line:#dde1d8;--muted:#6b7a70;--amber:#b8893a;--shadow:0 1px 2px rgba(20,36,28,.05),0 8px 24px rgba(20,36,28,.06);}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .wrap{max-width:920px;margin:0 auto;padding:30px 20px 70px;}
+  h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;letter-spacing:-.02em;margin:0 0 6px;color:var(--spruce);}
+  .lead{color:var(--muted);font-size:13.5px;margin:0 0 20px;border-bottom:1px solid var(--line);padding-bottom:16px;}
+  .lead b{color:var(--spruce-2);}
+  .bar{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap;}
+  button{cursor:pointer;border:none;border-radius:10px;background:var(--spruce);color:#fff;font:inherit;font-weight:600;font-size:15px;padding:12px 22px;transition:background .15s;}
+  button:hover{background:#173d2e;} button[disabled]{opacity:.6;cursor:default;}
+  .prog{font-size:13px;color:var(--spruce-2);font-family:'IBM Plex Mono',monospace;}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px 14px;margin-bottom:10px;}
+  .item .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px;}
+  .item .key{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--spruce);font-weight:600;}
+  .item .kat{font-size:11px;color:var(--muted);}
+  select{width:100%;border:1px solid var(--line);border-radius:8px;background:#fbfcfa;padding:9px 10px;font:inherit;font-size:13px;color:var(--ink);}
+  select:focus{outline:2px solid var(--spruce-2);outline-offset:1px;}
+  .meta{margin-top:7px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;}
+  .meta .pr{color:var(--kroner);font-weight:600;}
+  .flag{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.04em;border-radius:6px;padding:1px 7px;}
+  .f-ok{background:#f4f8f3;border:1px solid #d7e6d6;color:var(--spruce);}
+  .f-dummy{background:#f0f1ee;border:1px solid var(--line);color:var(--muted);}
+  .outwrap{margin-top:24px;}
+  .outwrap h2{font-family:'Bricolage Grotesque',sans-serif;font-size:17px;margin:0 0 6px;}
+  .outwrap p{font-size:13px;color:var(--muted);margin:0 0 10px;}
+  textarea{width:100%;height:240px;border:1px solid var(--line);border-radius:10px;background:#fbfcfa;padding:12px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.5;color:var(--ink);resize:vertical;}
+  .copy{margin-top:8px;background:var(--spruce-2);font-size:13px;padding:9px 16px;}
+  footer{margin-top:26px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;}
+  footer b{color:var(--spruce-2);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Kassal-mapping</h1>
+  <p class="lead">For hver råvare henter dette de beste kandidatene fra Kassal og foreslår ett produkt (med filter mot godteri, chips og erstatninger). <b>Sjekk hver rad</b> og bytt i nedtrekksmenyen hvis forslaget er feil. Nederst får du en ferdig <b>ING</b>-tabell å lime inn.</p>
+
+  <div class="bar">
+    <button id="go">Hent kandidater</button>
+    <span class="prog" id="prog"></span>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="outwrap" id="outwrap" style="display:none">
+    <h2>Ferdig ING-tabell</h2>
+    <p>Når radene ser riktige ut: trykk kopier og lim hele blokka inn til Claude.</p>
+    <textarea id="out" readonly></textarea>
+    <button class="copy" id="copy">Kopier kodeblokk</button>
+  </div>
+
+  <footer>Tips: nedtrekksmenyen viser navn · pris · kcal for hver kandidat. «Behold dummy» bruker det gamle tallet hvis ingen kandidat passer. Råvarer som krydder/hermetikk mangler ofte næringsdata i Kassal — da er dummy helt greit.</footer>
+</div>
+
+<script>
+const ITEMS=[
+  {key:"kyllingfilet",  s:"kyllingfilet fersk",   core:"kyllingfilet", kat:"Kjøtt",         fb:{n:"Kyllingfilet",kcal:106,p:22,k:0,f:1.8,pg:600,pris:75,pk:"600 g"}},
+  {key:"kjottdeig",     s:"kjøttdeig storfe",     core:"kjøttdeig",    kat:"Kjøtt",         fb:{n:"Kjøttdeig 14%",kcal:211,p:18.6,k:0,f:14,pg:400,pris:45,pk:"400 g"}},
+  {key:"svinekotelett", s:"svinekotelett",        core:"svinekotelett",kat:"Kjøtt",         fb:{n:"Svinekotelett",kcal:172,p:21,k:0,f:9,pg:600,pris:70,pk:"600 g"}},
+  {key:"kyllinglar",    s:"kyllinglår fersk",     core:"kyllinglår",   kat:"Kjøtt",         fb:{n:"Kyllinglår",kcal:161,p:18,k:0,f:9.5,pg:1000,pris:60,pk:"1 kg"}},
+  {key:"laksefilet",    s:"laksefilet",           core:"laksefilet",   kat:"Fisk",          fb:{n:"Laksefilet",kcal:208,p:20,k:0,f:13,pg:500,pris:95,pk:"500 g"}},
+  {key:"torskefilet",   s:"torskefilet",          core:"torskefilet",  kat:"Fisk",          fb:{n:"Torskefilet",kcal:82,p:18,k:0,f:0.7,pg:400,pris:75,pk:"400 g"}},
+  {key:"ris",           s:"jasminris",            core:"jasminris",    kat:"Tørrvarer",     fb:{n:"Jasminris",kcal:360,p:7,k:79,f:0.6,pg:1000,pris:32,pk:"1 kg"}},
+  {key:"pasta",         s:"spaghetti",            core:"spaghetti",    kat:"Tørrvarer",     fb:{n:"Pasta",kcal:359,p:12,k:72,f:1.5,pg:500,pris:19,pk:"500 g"}},
+  {key:"poteter",       s:"poteter fersk",        core:"poteter",      kat:"Frukt & grønt", fb:{n:"Poteter",kcal:75,p:2,k:16,f:0.1,pg:2000,pris:35,pk:"2 kg"}},
+  {key:"egg",           s:"egg frittgående",      core:"egg",          kat:"Meieri & egg",  fb:{n:"Egg",kcal:149,p:13,k:1,f:11,pg:700,pris:45,pk:"12 stk"}},
+  {key:"olivenolje",    s:"olivenolje extra virgin",core:"olivenolje", kat:"Tørrvarer",     fb:{n:"Olivenolje",kcal:884,p:0,k:0,f:100,pg:500,pris:55,pk:"500 ml"}},
+  {key:"lok",           s:"løk gul",              core:"løk",          kat:"Frukt & grønt", fb:{n:"Løk",kcal:40,p:1.1,k:7,f:0.1,pg:1000,pris:22,pk:"1 kg"}},
+  {key:"hvitlok",       s:"hvitløk fersk",        core:"hvitløk",      kat:"Frukt & grønt", fb:{n:"Hvitløk",kcal:149,p:6,k:30,f:0.5,pg:150,pris:18,pk:"150 g"}},
+  {key:"paprika",       s:"paprika rød",          core:"paprika",      kat:"Frukt & grønt", fb:{n:"Paprika",kcal:31,p:1,k:6,f:0.3,pg:400,pris:35,pk:"3 stk"}},
+  {key:"gulrot",        s:"gulrot",               core:"gulrot",       kat:"Frukt & grønt", fb:{n:"Gulrot",kcal:41,p:0.9,k:9,f:0.2,pg:1000,pris:20,pk:"1 kg"}},
+  {key:"brokkoli",      s:"brokkoli",             core:"brokkoli",     kat:"Frukt & grønt", fb:{n:"Brokkoli",kcal:34,p:2.8,k:7,f:0.4,pg:350,pris:27,pk:"1 stk"}},
+  {key:"squash",        s:"squash grønnsak",      core:"squash",       kat:"Frukt & grønt", fb:{n:"Squash",kcal:17,p:1.2,k:3,f:0.3,pg:300,pris:22,pk:"1 stk"}},
+  {key:"knusteTomater", s:"hakkede tomater",      core:"tomater",      kat:"Hermetikk",     fb:{n:"Hermetiske tomater",kcal:32,p:1.6,k:5,f:0.3,pg:400,pris:12,pk:"400 g"}},
+  {key:"tortilla",      s:"tortilla lefser",      core:"tortilla",     kat:"Bakevarer",     fb:{n:"Tortillalefser",kcal:310,p:8,k:50,f:7,pg:320,pris:27,pk:"8 stk"}},
+  {key:"romme",         s:"lettrømme",            core:"rømme",        kat:"Meieri & egg",  fb:{n:"Lettrømme",kcal:103,p:2.6,k:4,f:9,pg:300,pris:27,pk:"300 g"}},
+  {key:"revetOst",      s:"revet ost",            core:"ost",          kat:"Meieri & egg",  fb:{n:"Revet ost",kcal:381,p:26,k:1,f:30,pg:150,pris:33,pk:"150 g"}},
+  {key:"tacokrydder",   s:"tacokrydder",          core:"tacokrydder",  kat:"Tørrvarer",     fb:{n:"Tacokrydder",kcal:300,p:10,k:50,f:5,pg:40,pris:16,pk:"40 g"}},
+  {key:"rodeLinser",    s:"røde linser",          core:"linser",       kat:"Tørrvarer",     fb:{n:"Røde linser",kcal:338,p:24,k:52,f:1.5,pg:500,pris:32,pk:"500 g"}},
+  {key:"kikerter",      s:"kikerter boks",        core:"kikerter",     kat:"Hermetikk",     fb:{n:"Kikerter",kcal:119,p:7,k:16,f:2,pg:380,pris:16,pk:"380 g"}},
+  {key:"kokosmelk",     s:"kokosmelk",            core:"kokosmelk",    kat:"Hermetikk",     fb:{n:"Kokosmelk",kcal:180,p:1.6,k:3,f:18,pg:400,pris:22,pk:"400 g"}},
+  {key:"salat",         s:"salatmix",             core:"salat",        kat:"Frukt & grønt", fb:{n:"Salatmix",kcal:15,p:1.4,k:2,f:0.2,pg:175,pris:25,pk:"1 pose"}},
+  {key:"cherrytomat",   s:"cherrytomater",        core:"cherrytomat",  kat:"Frukt & grønt", fb:{n:"Cherrytomat",kcal:18,p:0.9,k:3,f:0.2,pg:250,pris:30,pk:"250 g"}},
+  {key:"melk",          s:"lettmelk",             core:"lettmelk",     kat:"Meieri & egg",  fb:{n:"Lettmelk",kcal:44,p:3.4,k:4.7,f:1.0,pg:1000,pris:23,pk:"1 l"}},
+  {key:"smor",          s:"meierismør",           core:"smør",         kat:"Meieri & egg",  fb:{n:"Smør",kcal:737,p:0.7,k:0.6,f:81,pg:500,pris:55,pk:"500 g"}},
+  {key:"tofu",          s:"tofu naturell",        core:"tofu",         kat:"Plantebasert",  fb:{n:"Tofu naturell",kcal:144,p:15,k:2,f:9,pg:250,pris:35,pk:"250 g"}},
+  {key:"edamame",       s:"edamame",              core:"edamame",      kat:"Plantebasert",  fb:{n:"Edamame",kcal:121,p:12,k:9,f:5,pg:400,pris:40,pk:"400 g"}},
+];
+
+// Ord som diskvalifiserer et treff (godteri, snacks, ferdigretter, erstatninger osv.)
+const JUNK=["chips","snacks","marsipan","sjokolade","godteri","squashies","kjeks","drops","pastiller",
+  "peanøtt","erstatning","vegansk","plantebasert","dressing","suppe","buljong","saus","bar ","kake",
+  "is ","iskrem","yoghurt","smoothie","juice","brus","pålegg","gratin","fløtepoteter","smak"];
+
+const list=document.getElementById("list"), prog=document.getElementById("prog"), go=document.getElementById("go");
+const store={}; // key -> {item, candidates:[...] , selectedIdx}
+
+function toGrams(w,u){ if(w==null||!isFinite(w))return null; u=(u||"").toLowerCase();
+  if(u==="g")return Math.round(w); if(u==="kg")return Math.round(w*1000);
+  if(u==="ml")return Math.round(w); if(u==="l"||u==="liter")return Math.round(w*1000); return null; }
+function wLabel(w,u){ if(w==null)return null; u=(u||"").toLowerCase(); if(u==="piece"||u==="stk")return w+" stk"; return w+" "+(u||"g"); }
+function complete(p){ return p.kcal!=null&&p.protein!=null&&p.carbs!=null&&p.fat!=null; }
+
+function scoreCand(p,item){
+  const name=(p.name||"").toLowerCase(); let s=0;
+  if(name.includes(item.core.toLowerCase())) s+=6;
+  if(complete(p)) s+=4; else if(p.kcal!=null) s+=1;
+  if(p.price!=null&&p.price<200) s+=2;
+  if(p.price!=null&&p.price>=300) s-=3;
+  for(const j of JUNK){ if(name.includes(j)) s-=8; }
+  s-=name.length*0.012;
+  return s;
+}
+
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+async function run(){
+  go.disabled=true; list.innerHTML="";
+  for(let i=0;i<ITEMS.length;i++){
+    const it=ITEMS[i]; prog.textContent=`Henter ${i+1}/${ITEMS.length} — ${it.key}…`;
+    let cands=[];
+    try{
+      const res=await fetch("/.netlify/functions/kassal?search="+encodeURIComponent(it.s));
+      const data=await res.json();
+      if(res.ok&&Array.isArray(data.products)) cands=data.products.filter(p=>p.price!=null);
+    }catch(e){}
+    cands.sort((a,b)=>scoreCand(b,it)-scoreCand(a,it));
+    cands=cands.slice(0,8);
+    store[it.key]={item:it,candidates:cands,selectedIdx:cands.length?0:-1};
+    renderItem(it.key);
+    await sleep(130);
+  }
+  prog.textContent="Ferdig ✓ — sjekk radene og bytt der forslaget er feil";
+  go.disabled=false; go.textContent="Hent på nytt";
+  document.getElementById("outwrap").style.display="block";
+  buildOutput();
+}
+
+function renderItem(key){
+  const st=store[key], it=st.item;
+  let div=document.getElementById("it-"+key);
+  if(!div){ div=document.createElement("div"); div.className="item"; div.id="it-"+key; list.appendChild(div); }
+  const opts=st.candidates.map((p,idx)=>{
+    const lbl=`${(p.name||"").slice(0,52)} · ${p.price} kr · ${p.kcal!=null?Math.round(p.kcal)+" kcal":"ingen næring"}`;
+    return `<option value="${idx}"${idx===st.selectedIdx?" selected":""}>${esc(lbl)}</option>`;
+  }).join("");
+  const dummySel=st.selectedIdx===-1?" selected":"";
+  div.innerHTML=`
+    <div class="head"><span class="key">${it.key}</span><span class="kat">${it.kat}</span></div>
+    <select data-key="${it.key}">
+      ${opts}
+      <option value="-1"${dummySel}>— Behold dummy (${esc(it.fb.n)}) —</option>
+    </select>
+    <div class="meta" id="meta-${it.key}"></div>`;
+  div.querySelector("select").addEventListener("change",e=>{
+    store[key].selectedIdx=parseInt(e.target.value,10); renderMeta(key); buildOutput();
+  });
+  renderMeta(key);
+}
+
+function entryFor(key){
+  const st=store[key], it=st.item;
+  const e={n:it.fb.n,kat:it.kat,kcal:it.fb.kcal,p:it.fb.p,k:it.fb.k,f:it.fb.f,pg:it.fb.pg,pris:it.fb.pris,pk:it.fb.pk,real:false};
+  if(st.selectedIdx>=0){
+    const p=st.candidates[st.selectedIdx];
+    if(p.name)e.n=p.name;
+    if(p.price!=null)e.pris=p.price;
+    if(p.kcal!=null)e.kcal=p.kcal;
+    if(p.protein!=null)e.p=p.protein;
+    if(p.carbs!=null)e.k=p.carbs;
+    if(p.fat!=null)e.f=p.fat;
+    const g=toGrams(p.weight,p.weightUnit); if(g){e.pg=g; const lbl=wLabel(p.weight,p.weightUnit); if(lbl)e.pk=lbl;}
+    e.real=true;
+  }
+  return e;
+}
+function renderMeta(key){
+  const e=entryFor(key), m=document.getElementById("meta-"+key);
+  m.innerHTML=`<span class="pr">${e.pris} kr</span><span>${r1(e.kcal)} kcal · ${r1(e.p)}P · ${r1(e.k)}K · ${r1(e.f)}F /100g</span><span class="flag ${e.real?"f-ok":"f-dummy"}">${e.real?"ekte":"dummy"}</span>`;
+}
+function buildOutput(){
+  let s="const ING = {\n";
+  ITEMS.forEach(it=>{ const e=entryFor(it.key);
+    s+=`  ${it.key}:{n:${JSON.stringify(e.n)},kat:${JSON.stringify(e.kat)},kcal:${e.kcal},p:${e.p},k:${e.k},f:${e.f},pg:${e.pg},pris:${e.pris},pk:${JSON.stringify(e.pk)}},\n`;
+  });
+  s+="};";
+  document.getElementById("out").value=s;
+}
+function r1(v){ return v==null?"—":Math.round(v*10)/10; }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+go.addEventListener("click",run);
+document.getElementById("copy").addEventListener("click",()=>{
+  const t=document.getElementById("out"); t.select(); document.execCommand("copy");
+  document.getElementById("copy").textContent="Kopiert ✓";
+});
+</script>
+</body>
+</html>
