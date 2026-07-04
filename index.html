@@ -200,6 +200,12 @@
   .use-menu:hover{background:#173d2e;}
   .use-menu[disabled]{opacity:.7;cursor:default;}
   .use-menu-hint{font-size:12.5px;color:var(--muted);}
+  .obs{background:#fbf6ee;border:1px solid #ecdcc4;border-radius:12px;padding:15px 17px;box-shadow:var(--shadow);}
+  .obs-title{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:15px;color:var(--kroner);margin-bottom:6px;}
+  .obs-body{font-size:13px;color:var(--ink);margin-bottom:8px;}
+  .obs-line{font-size:13px;color:var(--ink);margin:3px 0;}
+  .obs-line b{color:var(--spruce-2);}
+  .obs-price{font-size:12px;color:var(--muted);margin-top:9px;border-top:1px dashed #ecdcc4;padding-top:8px;}
 </style>
 </head>
 <body>
@@ -350,7 +356,7 @@ const ING = {
 const RECIPES = [
   {id:"kylling_ris",navn:"Kylling og ris med brokkoli",tag:"kylling",veg:false,ing:[["kyllingfilet",600],["ris",300],["brokkoli",350],["lok",100],["olivenolje",20],["hvitlok",15]]},
   {id:"bolognese",navn:"Kjøttdeig og pasta (bolognese)",tag:"storfe",veg:false,ing:[["kjottdeig",400],["pasta",360],["knusteTomater",400],["lok",150],["gulrot",120],["olivenolje",15],["hvitlok",15]]},
-  {id:"taco",navn:"Tacofredag med kjøttdeig",tag:"storfe",veg:false,ing:[["kjottdeig",400],["tortilla",320],["paprika",200],["lok",100],["romme",150],["revetOst",100],["tacokrydder",40],["salat",100]]},
+  {id:"taco",navn:"Taco",tag:"storfe",veg:false,ing:[["kjottdeig",400],["tortilla",320],["paprika",200],["lok",100],["romme",150],["revetOst",100],["tacokrydder",40],["salat",100]]},
   {id:"laks",navn:"Ovnsbakt laks med poteter",tag:"fisk",veg:false,ing:[["laksefilet",500],["poteter",800],["brokkoli",350],["olivenolje",20],["smor",20]]},
   {id:"torsk",navn:"Torsk med poteter og gulrot",tag:"fisk",veg:false,ing:[["torskefilet",400],["poteter",800],["gulrot",200],["smor",20]]},
   {id:"wok",navn:"Kyllingwok med grønnsaker",tag:"kylling",veg:false,ing:[["kyllingfilet",500],["ris",300],["paprika",200],["squash",200],["gulrot",150],["lok",100],["olivenolje",20],["hvitlok",15]]},
@@ -430,6 +436,38 @@ const ALLERGENER={
 const ALLERGEN_LABEL={gluten:"Uten gluten",melk:"Uten melk",egg:"Uten egg",fisk:"Uten fisk",soya:"Uten soya",nøtter:"Uten nøtter",skalldyr:"Uten skalldyr",sesam:"Uten sesam",selleri:"Uten selleri"};
 // Hver rett får settet av allergener den inneholder.
 RECIPES.forEach(r=>{ r.allergener=new Set(); for(const a in ALLERGENER){ if(r.ing.some(([id])=>ALLERGENER[a].has(id))) r.allergener.add(a); } });
+
+// Rolle for allergen-bærende råvarer:
+//  "tilpassbar" = kan byttes til fri-for-variant eller sløyfes -> BEHOLD retten, gi varsel.
+//  "kritisk"    = retten faller uten den -> FILTRER retten bort, finn en annen.
+const ALLERGEN_ROLLE={
+  pasta:"tilpassbar", tortilla:"tilpassbar",                 // gluten: finnes glutenfrie varianter
+  melk:"tilpassbar", romme:"tilpassbar", revetOst:"tilpassbar", smor:"tilpassbar", // melk: finnes laktose-/melkefrie
+  egg:"kritisk",                                             // egg-baserte retter
+  laksefilet:"kritisk", torskefilet:"kritisk",               // fisken ER retten
+  tofu:"kritisk", edamame:"kritisk",                         // soya-proteinbase, ingen kjøpbar erstatning
+};
+// Unntak per rett (recipeId -> {råvareId: rolle}) — tom nå, brukes hvis en rett trenger annen vurdering.
+const ALLERGEN_ROLLE_UNNTAK={};
+function rolleFor(recipeId,ingId){
+  const u=ALLERGEN_ROLLE_UNNTAK[recipeId];
+  return (u&&u[ingId]) || ALLERGEN_ROLLE[ingId] || "kritisk";
+}
+// Allergen-type på oversiktsnivå (for merkelapper): kan hele allergenet alltid tilpasses, eller er det bærende?
+const ALLERGEN_TYPE={gluten:"tilpassbar",melk:"tilpassbar",nøtter:"tilpassbar",sesam:"tilpassbar",selleri:"tilpassbar",egg:"kritisk",fisk:"kritisk",soya:"kritisk",skalldyr:"kritisk"};
+// For en rett + unngå-liste: er den trygg (ingen kritiske allergener), og hvilke tilpassbare varsler gjelder?
+function recipeAllergyInfo(r,avoid){
+  let kritisk=false; const warn=[];
+  for(const [id] of r.ing){
+    for(const a of avoid){
+      if(ALLERGENER[a]&&ALLERGENER[a].has(id)){
+        if(rolleFor(r.id,id)==="kritisk") kritisk=true;
+        else warn.push({allergen:a,ing:ING[id].n});
+      }
+    }
+  }
+  return {safe:!kritisk, warn};
+}
 const STATS={};RECIPES.forEach(r=>STATS[r.id]=recipeStats(r));
 function perDinnerTarget(daily){return {kcal:daily.kcal*DINNER_SHARE,p:daily.p*DINNER_SHARE,k:daily.k*DINNER_SHARE,f:daily.f*DINNER_SHARE};}
 function scoreRecipe(r,pref,daily){
@@ -546,9 +584,9 @@ async function buildPlan(state){
 
   // Diett-sjekk: vegansk er strengest (ingen animalske produkter), så vegetar (uten kjøtt/fisk), ellers alt.
   const dietOk=r=> veganOnly ? r.vegan : (vegOnly ? r.veg : true);
-  // Allergi-sjekk: en rett er trygg bare hvis den ikke inneholder noe brukeren må unngå.
+  // Allergi-sjekk: bærende allergen -> retten er utrygg (filtreres bort). Tilpassbart -> behold, varsle.
   const avoid=Array.isArray(interp.avoid)?interp.avoid.filter(a=>a in ALLERGENER):[];
-  const allergyOk=r=> !avoid.some(a=>r.allergener.has(a));
+  const allergyOk=r=> recipeAllergyInfo(r,avoid).safe;
   const ok=r=> dietOk(r) && allergyOk(r);
   // Poolen til frie valg respekterer både diett og allergier; låste retter sjekkes mot samme regel.
   const pool=RECIPES.filter(ok);
@@ -600,7 +638,14 @@ async function buildPlan(state){
     slots[i]=r; if(r) used.add(r.id);
   }
 
-  return {plan:slots,goal:interp.goal,pref,vegOnly,veganOnly,avoid,warn,daily,note:interp.note,constraints:cons,source:interp.source};
+  // Samle varsler for tilpassbare allergener i de valgte rettene (til OBS-boksen).
+  const advarsler={};
+  slots.forEach(r=>{ if(!r) return; recipeAllergyInfo(r,avoid).warn.forEach(w=>{
+    (advarsler[w.allergen]=advarsler[w.allergen]||new Set()).add(`${r.navn} (${w.ing})`);
+  }); });
+  const advarslerObj={}; Object.keys(advarsler).forEach(a=>advarslerObj[a]=[...advarsler[a]]);
+
+  return {plan:slots,goal:interp.goal,pref,vegOnly,veganOnly,avoid,warn,advarsler:advarslerObj,daily,note:interp.note,constraints:cons,source:interp.source};
 }
 
 /* ---------- HANDLELISTE ---------- */
@@ -640,7 +685,7 @@ function showLoading(){
   el.innerHTML=`<div class="loading"><span class="spinner"></span> Claude leser hverdagen din og setter målene…</div>`;
 }
 function render(){
-  const {plan,goal,pref,daily,note,source,vegOnly,veganOnly,avoid,warn,constraints}=state.current,persons=state.persons,N=plan.length;
+  const {plan,goal,pref,daily,note,source,vegOnly,veganOnly,avoid,warn,advarsler,constraints}=state.current,persons=state.persons,N=plan.length;
 
   // Ingen trygge retter (for streng kombinasjon av diett/allergier) -> tydelig beskjed, ingen utrygg mat.
   if(!plan.length){
@@ -662,7 +707,10 @@ function render(){
     const labTxt=source==="claude"?"Tolket av Claude":"Tolket lokalt — Claude var utilgjengelig";
     const chips=[goalLabel(goal),`≈${fmt(daily.kcal)} kcal/dag`,`${fmt(daily.p)} g protein/dag`,prefLabel(pref)];
     if(veganOnly)chips.push("Kun vegansk"); else if(vegOnly)chips.push("Kun vegetar");
-    if(avoid&&avoid.length) avoid.forEach(a=>chips.push(ALLERGEN_LABEL[a]||("Uten "+a)));
+    if(avoid&&avoid.length) avoid.forEach(a=>{
+      if(ALLERGEN_TYPE[a]==="tilpassbar") chips.push("Tilpasset: "+a);
+      else chips.push(ALLERGEN_LABEL[a]||("Uten "+a));
+    });
     if(constraints){
       const capDay=d=>d.charAt(0).toUpperCase()+d.slice(1);
       constraints.pinned.forEach(p=>{ const r=RECIPES.find(x=>x.id===p.recipeId); if(r) chips.push(`✓ ${capDay(p.day)}: ${r.navn}`); });
@@ -673,6 +721,18 @@ function render(){
       ${warn==="faa"?`<div class="note" style="color:var(--kroner)">Få retter passer alle valgene dine, så noen retter gjentas denne uka.</div>`:""}
       <div class="chips">${chips.map(c=>`<span class="chip">${c}</span>`).join("")}</div>`;
     el.appendChild(box);
+  }
+
+  // OBS-boks: tilpassbare allergener i menyen (kjøp fri-for-varianter / utelat ingrediens).
+  if(advarsler && Object.keys(advarsler).length){
+    const navnFor={gluten:"gluten",melk:"melk/laktose",nøtter:"nøtter",sesam:"sesam",selleri:"selleri"};
+    const lines=Object.keys(advarsler).map(a=>`<div class="obs-line"><b>${navnFor[a]||a}:</b> ${advarsler[a].join(", ")}</div>`).join("");
+    const obs=document.createElement("div");obs.className="obs anim";
+    obs.innerHTML=`<div class="obs-title">⚠️ OBS – tilpass innkjøpene dine</div>
+      <div class="obs-body">Noen retter inneholder ingredienser du må bytte til «fri-for»-varianter eller utelate. Kjøp egnede alternativer av disse varene:</div>
+      ${lines}
+      <div class="obs-price">Merk: prisen på tilpassede varer kan avvike noe fra det som vises i handlelista.</div>`;
+    el.appendChild(obs);
   }
 
   const tiles=document.createElement("div");tiles.className="tiles anim";
@@ -737,7 +797,7 @@ function render(){
 function swapDinner(idx){
   const {plan,pref,daily,vegOnly,veganOnly,avoid}=state.current,used=new Set(plan.map(r=>r.id));
   const av=Array.isArray(avoid)?avoid:[];
-  const ok=r=> (veganOnly ? r.vegan : (vegOnly ? r.veg : true)) && !av.some(a=>r.allergener.has(a));
+  const ok=r=> (veganOnly ? r.vegan : (vegOnly ? r.veg : true)) && recipeAllergyInfo(r,av).safe;
   let pool=RECIPES.filter(r=>ok(r)&&!used.has(r.id));
   if(!pool.length)pool=RECIPES.filter(ok);
   if(!pool.length) return;

@@ -34,7 +34,7 @@ export default async (request) => {
 Tilgjengelige retter (recipeId — navn — type):
 kylling_ris — Kylling og ris med brokkoli — kylling
 bolognese — Kjøttdeig og pasta (bolognese) — storfe
-taco — Tacofredag med kjøttdeig — storfe
+taco — Taco — storfe
 laks — Ovnsbakt laks med poteter — fisk
 torsk — Torsk med poteter og gulrot — fisk
 wok — Kyllingwok med grønnsaker — kylling
