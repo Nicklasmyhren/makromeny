@@ -84,7 +84,7 @@ protein_gryte — Proteingryte med linser og edamame — vegetar · vegansk
 Gyldige typer: kylling, storfe, svin, fisk, vegetar. Gyldige dager: mandag, tirsdag, onsdag, torsdag, fredag, lørdag, søndag.
 
 Schema:
-{"goal":"muskler"|"ned"|"holde","kcal":<daglig kaloribehov, tall>,"protein":<daglig gram, tall>,"carbs":<daglig gram, tall>,"fat":<daglig gram, tall>,"preference":"protein"|"karbo"|"billig"|"balansert","vegOnly":<boolean>,"veganOnly":<boolean>,"constraints":{"pinned":[{"day":"<ukedag>","recipeId":"<id fra listen>"}],"tagMin":[{"tag":"<type>","count":<tall>}]},"note":"<kort vennlig melding på norsk, maks 2 setninger>"}
+{"goal":"muskler"|"ned"|"holde","kcal":<daglig kaloribehov, tall>,"protein":<daglig gram, tall>,"carbs":<daglig gram, tall>,"fat":<daglig gram, tall>,"preference":"protein"|"karbo"|"billig"|"balansert","vegOnly":<boolean>,"veganOnly":<boolean>,"avoid":[<allergener som må unngås: "gluten","melk","egg","fisk","soya","nøtter","skalldyr","sesam","selleri">],"constraints":{"pinned":[{"day":"<ukedag>","recipeId":"<id fra listen>"}],"tagMin":[{"tag":"<type>","count":<tall>}]},"note":"<kort vennlig melding på norsk, maks 2 setninger>"}
 
 Regler for constraints (DETTE er det som faktisk styrer menyen — ikke bare nevn ønskene i note, legg dem inn her):
 - Vil brukeren ha en bestemt rett på en bestemt dag (f.eks. "taco på fredag") -> pinned med riktig recipeId og day.
@@ -94,6 +94,8 @@ Regler for constraints (DETTE er det som faktisk styrer menyen — ikke bare nev
 - Er brukeren vegansk (veganOnly), pin KUN retter merket "vegansk" i lista.
 
 Sett ellers realistiske dagsverdier for en voksen, og vektlegg det brukeren sier (utholdenhet -> mer karbo; styrke/muskler -> mer protein; vektnedgang -> lavere kcal og goal ned; student/lite penger -> preference billig; vegetar (uten kjøtt og fisk, men ost og egg er ok) -> vegOnly true; vegansk eller plantebasert (INGEN animalske produkter, heller ikke ost, egg, melk, rømme, smør) -> veganOnly true).
+
+ALLERGIER er viktig for sikkerhet. Legg allergener brukeren ikke tåler i "avoid"-lista. Tolk vanlige norske uttrykk: cøliaki/glutenintoleranse/glutenfri -> "gluten"; laktoseintolerant/melkeallergi/melkefri -> "melk"; eggallergi -> "egg"; fiskeallergi -> "fisk"; soyaallergi -> "soya"; nøtteallergi/peanøttallergi -> "nøtter"; skalldyrallergi -> "skalldyr". Er du i tvil om brukeren nevner en allergi, ta den heller med enn å utelate den. La "avoid" være tom [] hvis ingen allergier nevnes.
 
 Brukerens beskrivelse: "${text.replace(/"/g, "'")}"`;
 

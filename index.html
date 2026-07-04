@@ -414,6 +414,22 @@ function recipeStats(r){
 const ANIMALSK=new Set(["kyllingfilet","kjottdeig","svinekotelett","kyllinglar","laksefilet","torskefilet","egg","romme","revetOst","melk","smor"]);
 // En rett er vegansk hvis ingen av råvarene er animalske.
 RECIPES.forEach(r=>{ r.vegan = r.ing.every(([id])=> !ANIMALSK.has(id)); });
+
+// Allergener: hvilke råvarer inneholder hva. Grunnmur for allergifiltre — utvides når nye råvarer legges til.
+const ALLERGENER={
+  gluten:new Set(["pasta","tortilla"]),
+  melk:new Set(["melk","romme","revetOst","smor"]),
+  egg:new Set(["egg"]),
+  fisk:new Set(["laksefilet","torskefilet"]),
+  soya:new Set(["tofu","edamame"]),
+  nøtter:new Set([]),
+  skalldyr:new Set([]),
+  sesam:new Set([]),
+  selleri:new Set([]),
+};
+const ALLERGEN_LABEL={gluten:"Uten gluten",melk:"Uten melk",egg:"Uten egg",fisk:"Uten fisk",soya:"Uten soya",nøtter:"Uten nøtter",skalldyr:"Uten skalldyr",sesam:"Uten sesam",selleri:"Uten selleri"};
+// Hver rett får settet av allergener den inneholder.
+RECIPES.forEach(r=>{ r.allergener=new Set(); for(const a in ALLERGENER){ if(r.ing.some(([id])=>ALLERGENER[a].has(id))) r.allergener.add(a); } });
 const STATS={};RECIPES.forEach(r=>STATS[r.id]=recipeStats(r));
 function perDinnerTarget(daily){return {kcal:daily.kcal*DINNER_SHARE,p:daily.p*DINNER_SHARE,k:daily.k*DINNER_SHARE,f:daily.f*DINNER_SHARE};}
 function scoreRecipe(r,pref,daily){
@@ -465,11 +481,13 @@ function validateConstraints(c){
 }
 function normalize(o,source){
   const goals=["muskler","ned","holde"], prefs=["protein","karbo","billig","balansert"];
+  const validAllergen=new Set(["gluten","melk","egg","fisk","soya","nøtter","skalldyr","sesam","selleri"]);
   const goal = goals.includes(o.goal)?o.goal:"holde";
   const pref = prefs.includes(o.preference)?o.preference:"balansert";
   const clamp=(v,lo,hi,d)=>{ v=Number(v); return isFinite(v)?Math.min(hi,Math.max(lo,v)):d; };
+  const avoid = Array.isArray(o.avoid) ? [...new Set(o.avoid.map(a=>String(a).toLowerCase()).filter(a=>validAllergen.has(a)))] : [];
   return {
-    goal, preference:pref, vegOnly:(!!o.vegOnly||!!o.veganOnly), veganOnly:!!o.veganOnly,
+    goal, preference:pref, vegOnly:(!!o.vegOnly||!!o.veganOnly), veganOnly:!!o.veganOnly, avoid,
     kcal:clamp(o.kcal,1200,4000,GOAL_TARGET[goal].kcal),
     p:clamp(o.protein,60,260,GOAL_TARGET[goal].p),
     k:clamp(o.carbs,50,520,GOAL_TARGET[goal].k),
@@ -478,6 +496,17 @@ function normalize(o,source){
     constraints:validateConstraints(o.constraints),
     source
   };
+}
+/* Deterministisk allergi-skann — brukes både som fallback OG som sikkerhetsnett etter Claude. */
+function detectAllergies(text){
+  const t=(text||"").toLowerCase(); const a=[];
+  if(/(glutenfri|gluten|cøliaki|coliaki|cøliak)/.test(t)) a.push("gluten");
+  if(/(laktose|melkeallergi|melkefri|uten melk|meierifri|meieriprodukt)/.test(t)) a.push("melk");
+  if(/(eggallergi|uten egg|eggfri)/.test(t)) a.push("egg");
+  if(/(fiskeallergi|uten fisk|fiskefri)/.test(t)) a.push("fisk");
+  if(/(soyaallergi|soya|uten soya)/.test(t)) a.push("soya");
+  if(/(nøtteallergi|notteallergi|uten nøtter|peanøtt|nøttefri)/.test(t)) a.push("nøtter");
+  return a;
 }
 /* regelbasert fallback (hvis API utilgjengelig, f.eks offline-deploy) */
 function interpretLocal(text,state){
@@ -488,9 +517,10 @@ function interpretLocal(text,state){
   if(/(ned i vekt|gå ned|ga ned|slank|kalori|deficit|underskudd)/.test(t)) goal="ned";
   if(/(løp|lop|kondis|sykl|sykk|maraton|utholden)/.test(t)){ if(!goal)goal="holde"; }
   if(/(billig|spare|student|stram|rimelig|lite penger|økonom|okonom)/.test(t)) pref="billig";
+  const avoid=detectAllergies(text);
   goal=goal||state.goal; pref=pref||state.pref;
   const g=GOAL_TARGET[goal];
-  return {goal,preference:pref,vegOnly,veganOnly,kcal:g.kcal,p:g.p,k:g.k,f:g.f,
+  return {goal,preference:pref,vegOnly,veganOnly,avoid,kcal:g.kcal,p:g.p,k:g.k,f:g.f,
     note:"Tolket lokalt uten Claude (offline-fallback).",constraints:{pinned:[],tagMin:[]},source:"regel"};
 }
 
@@ -508,14 +538,25 @@ async function buildPlan(state){
     interp={goal:state.goal,preference:state.pref,vegOnly:false,veganOnly:false,kcal:g.kcal,p:g.p,k:g.k,f:g.f,note:null,constraints:{pinned:[],tagMin:[]},source:"valg"};
   }
   const daily={kcal:interp.kcal,p:interp.p,k:interp.k,f:interp.f};
+  // Sikkerhetsnett: allergier er for viktig til å overlate til AI alene. Skann teksten og legg alltid til det vi finner.
+  if(text){ const scanned=detectAllergies(text); if(scanned.length){ interp.avoid=[...new Set([...(interp.avoid||[]), ...scanned])]; } }
   const pref=interp.preference, vegOnly=interp.vegOnly, veganOnly=interp.veganOnly;
   const cons=interp.constraints||{pinned:[],tagMin:[]};
   const N=state.dinners, maxPerTag=Math.max(2,Math.ceil(N/3));
 
   // Diett-sjekk: vegansk er strengest (ingen animalske produkter), så vegetar (uten kjøtt/fisk), ellers alt.
   const dietOk=r=> veganOnly ? r.vegan : (vegOnly ? r.veg : true);
-  // Poolen til frie valg respekterer dietten; låste retter sjekkes mot samme regel.
-  const pool=RECIPES.filter(dietOk);
+  // Allergi-sjekk: en rett er trygg bare hvis den ikke inneholder noe brukeren må unngå.
+  const avoid=Array.isArray(interp.avoid)?interp.avoid.filter(a=>a in ALLERGENER):[];
+  const allergyOk=r=> !avoid.some(a=>r.allergener.has(a));
+  const ok=r=> dietOk(r) && allergyOk(r);
+  // Poolen til frie valg respekterer både diett og allergier; låste retter sjekkes mot samme regel.
+  const pool=RECIPES.filter(ok);
+  const warn = pool.length===0 ? "tom" : (pool.length<N ? "faa" : null);
+  // Ingen trygge retter i det hele tatt -> ikke server noe utrygt; gi tydelig beskjed i stedet.
+  if(pool.length===0){
+    return {plan:[],goal:interp.goal,pref,vegOnly,veganOnly,avoid,warn:"tom",daily,note:interp.note,constraints:cons,source:interp.source};
+  }
   const ss=pool.map(r=>scoreRecipe(r,pref,daily));
   const jitter=(Math.max(...ss)-Math.min(...ss))*0.35||1;
   const scoreOf=r=>scoreRecipe(r,pref,daily)+(Math.random()-0.5)*jitter-(recentRecipeIds.has(r.id)?1e6:0);
@@ -527,7 +568,7 @@ async function buildPlan(state){
   // 1) Lås retter til bestemte dager (taco på fredag osv.)
   for(const p of cons.pinned){
     const r=RECIPES.find(x=>x.id===p.recipeId);
-    if(!r||used.has(r.id)||!dietOk(r)) continue;
+    if(!r||used.has(r.id)||!ok(r)) continue;
     let idx=DAY_INDEX[p.day];
     if(idx==null||idx>=N||slots[idx]!==null) idx=firstFree();
     if(idx<0) continue;
@@ -559,7 +600,7 @@ async function buildPlan(state){
     slots[i]=r; if(r) used.add(r.id);
   }
 
-  return {plan:slots,goal:interp.goal,pref,vegOnly,veganOnly,daily,note:interp.note,constraints:cons,source:interp.source};
+  return {plan:slots,goal:interp.goal,pref,vegOnly,veganOnly,avoid,warn,daily,note:interp.note,constraints:cons,source:interp.source};
 }
 
 /* ---------- HANDLELISTE ---------- */
@@ -599,7 +640,15 @@ function showLoading(){
   el.innerHTML=`<div class="loading"><span class="spinner"></span> Claude leser hverdagen din og setter målene…</div>`;
 }
 function render(){
-  const {plan,goal,pref,daily,note,source,vegOnly,veganOnly,constraints}=state.current,persons=state.persons,N=plan.length;
+  const {plan,goal,pref,daily,note,source,vegOnly,veganOnly,avoid,warn,constraints}=state.current,persons=state.persons,N=plan.length;
+
+  // Ingen trygge retter (for streng kombinasjon av diett/allergier) -> tydelig beskjed, ingen utrygg mat.
+  if(!plan.length){
+    const el0=document.getElementById("results");
+    el0.innerHTML=`<div class="loading" style="display:block">Fant ingen retter som passer alle valgene dine samtidig${(avoid&&avoid.length)?` (unngår: ${avoid.map(a=>ALLERGEN_LABEL[a]?.replace("Uten ","").toLowerCase()||a).join(", ")})`:""}. Prøv å fjerne én begrensning, så finner vi en meny.</div>`;
+    return;
+  }
+
   const avg={kcal:0,p:0,k:0,f:0};
   plan.forEach(r=>{const s=STATS[r.id];avg.kcal+=s.kcal;avg.p+=s.p;avg.k+=s.k;avg.f+=s.f;});
   Object.keys(avg).forEach(k=>avg[k]/=N);
@@ -613,6 +662,7 @@ function render(){
     const labTxt=source==="claude"?"Tolket av Claude":"Tolket lokalt — Claude var utilgjengelig";
     const chips=[goalLabel(goal),`≈${fmt(daily.kcal)} kcal/dag`,`${fmt(daily.p)} g protein/dag`,prefLabel(pref)];
     if(veganOnly)chips.push("Kun vegansk"); else if(vegOnly)chips.push("Kun vegetar");
+    if(avoid&&avoid.length) avoid.forEach(a=>chips.push(ALLERGEN_LABEL[a]||("Uten "+a)));
     if(constraints){
       const capDay=d=>d.charAt(0).toUpperCase()+d.slice(1);
       constraints.pinned.forEach(p=>{ const r=RECIPES.find(x=>x.id===p.recipeId); if(r) chips.push(`✓ ${capDay(p.day)}: ${r.navn}`); });
@@ -620,6 +670,7 @@ function render(){
     }
     box.innerHTML=`<div class="lab"><span class="dot"></span>${labTxt}</div>
       ${note?`<div class="note">${note}</div>`:""}
+      ${warn==="faa"?`<div class="note" style="color:var(--kroner)">Få retter passer alle valgene dine, så noen retter gjentas denne uka.</div>`:""}
       <div class="chips">${chips.map(c=>`<span class="chip">${c}</span>`).join("")}</div>`;
     el.appendChild(box);
   }
@@ -684,10 +735,12 @@ function render(){
 }
 
 function swapDinner(idx){
-  const {plan,pref,daily,vegOnly,veganOnly}=state.current,used=new Set(plan.map(r=>r.id));
-  const dietOk=r=> veganOnly ? r.vegan : (vegOnly ? r.veg : true);
-  let pool=RECIPES.filter(r=>dietOk(r)&&!used.has(r.id));
-  if(!pool.length)pool=RECIPES.filter(dietOk);
+  const {plan,pref,daily,vegOnly,veganOnly,avoid}=state.current,used=new Set(plan.map(r=>r.id));
+  const av=Array.isArray(avoid)?avoid:[];
+  const ok=r=> (veganOnly ? r.vegan : (vegOnly ? r.veg : true)) && !av.some(a=>r.allergener.has(a));
+  let pool=RECIPES.filter(r=>ok(r)&&!used.has(r.id));
+  if(!pool.length)pool=RECIPES.filter(ok);
+  if(!pool.length) return;
   const ranked=pool.map(r=>({r,s:scoreRecipe(r,pref,daily)})).sort((a,b)=>b.s-a.s);
   const top=ranked.slice(0,Math.min(4,ranked.length));
   plan[idx]=top[Math.floor(Math.random()*top.length)].r; render();
