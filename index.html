@@ -206,6 +206,8 @@
   .obs-line{font-size:13px;color:var(--ink);margin:3px 0;}
   .obs-line b{color:var(--spruce-2);}
   .obs-price{font-size:12px;color:var(--muted);margin-top:9px;border-top:1px dashed #ecdcc4;padding-top:8px;}
+  .meal .body .rmeta{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--spruce-2);margin:-2px 0 6px;text-transform:uppercase;}
+  .meal .body .rdesc{font-size:12.5px;color:var(--ink);margin-bottom:9px;line-height:1.45;}
 </style>
 </head>
 <body>
@@ -225,15 +227,6 @@
   <div class="grid">
     <section class="panel sticky">
       <p class="eyebrow">Dine mål</p>
-
-      <div class="field">
-        <label>Hva er målet ditt?</label>
-        <div class="seg" id="goal">
-          <button data-v="muskler">Bygge muskler</button>
-          <button data-v="ned">Gå ned i vekt</button>
-          <button data-v="holde" class="is-active">Holde vekten</button>
-        </div>
-      </div>
 
       <div class="field">
         <label>Antall middager</label>
@@ -420,6 +413,60 @@ function recipeStats(r){
 const ANIMALSK=new Set(["kyllingfilet","kjottdeig","svinekotelett","kyllinglar","laksefilet","torskefilet","egg","romme","revetOst","melk","smor"]);
 // En rett er vegansk hvis ingen av råvarene er animalske.
 RECIPES.forEach(r=>{ r.vegan = r.ing.every(([id])=> !ANIMALSK.has(id)); });
+
+// Rett-mal: nye felt (vanskelighetsgrad, kjøkken/stil, tilberedningstid, beskrivelse) koblet på hver rett.
+// Foreløpig fylt her; flyttes til Supabase i neste fase. niva: Enkel/Middels/Avansert. tid: minutter.
+const RETT_META={
+  kylling_ris:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Saftig kyllingfilet med ris og sprø brokkoli — enkel og proteinrik."},
+  bolognese:{niva:"Enkel",kjokken:"Italiensk",tid:30,desc:"Klassisk kjøttdeigsaus som får godgjøre seg, servert over pasta."},
+  taco:{niva:"Enkel",kjokken:"Meksikansk",tid:25,desc:"Fredagsfavoritten — krydret kjøttdeig med friske tilbehør i lefse."},
+  laks:{niva:"Enkel",kjokken:"Norsk",tid:40,desc:"Ovnsbakt laks med poteter og grønnsaker — enkelt og næringsrikt."},
+  torsk:{niva:"Enkel",kjokken:"Norsk",tid:35,desc:"Mør torsk med kokte poteter og gulrot — norsk husmannskost."},
+  wok:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Rask kyllingwok med fargerike grønnsaker og ris."},
+  svin:{niva:"Enkel",kjokken:"Norsk",tid:35,desc:"Saftige svinekoteletter med poteter og dampet brokkoli."},
+  kyllinglar:{niva:"Enkel",kjokken:"Norsk",tid:50,desc:"Sprøstekte kyllinglår med ovnsbakte poteter og gulrot."},
+  grateng:{niva:"Middels",kjokken:"Norsk",tid:45,desc:"Kremet fiskegrateng med makaroni — trøstemat fra ovnen."},
+  linsegryte:{niva:"Enkel",kjokken:"Indisk",tid:30,desc:"Fyldig linsegryte med kokos og tomat, mild og mettende."},
+  kikertgryte:{niva:"Enkel",kjokken:"Indisk",tid:30,desc:"Krydret kikertgryte med ris — rimelig og proteinrik."},
+  kyllingsalat:{niva:"Enkel",kjokken:"Salat",tid:20,desc:"Frisk kyllingsalat med cherrytomater og sprø salat."},
+  omelett:{niva:"Enkel",kjokken:"Norsk",tid:20,desc:"Luftig omelett med ost og grønnsaker — rask og proteinrik."},
+  pasta_squash:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Enkel tomatpasta med squash og revet ost."},
+  kyllinggryte:{niva:"Enkel",kjokken:"Norsk",tid:30,desc:"Mettende kyllinggryte med paprika, tomat og ris."},
+  kremet_kyllingpasta:{niva:"Middels",kjokken:"Italiensk",tid:30,desc:"Kremet kyllingpasta med brokkoli og ost — helaften på en halvtime."},
+  kjottdeig_ris:{niva:"Enkel",kjokken:"Norsk",tid:25,desc:"Enkel kjøttdeiggryte med paprika og ris."},
+  pastaform:{niva:"Middels",kjokken:"Italiensk",tid:45,desc:"Gratinert pastaform med kjøttdeig og ostetopp fra ovnen."},
+  tacobowl:{niva:"Enkel",kjokken:"Meksikansk",tid:25,desc:"Alt det gode fra taco, servert i skål med ris."},
+  laks_pasta:{niva:"Middels",kjokken:"Italiensk",tid:30,desc:"Kremet laksepasta med squash — restaurantfølelse hjemme."},
+  torsk_ris:{niva:"Enkel",kjokken:"Norsk",tid:30,desc:"Dampet torsk med ris og grønnsaker — lett og sunt."},
+  kylling_poteter:{niva:"Enkel",kjokken:"Norsk",tid:45,desc:"Kyllingfilet med ovnspoteter og grønnsaker."},
+  svin_ris:{niva:"Enkel",kjokken:"Norsk",tid:30,desc:"Svinekotelett med ris og stekt paprika."},
+  stektris_egg:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Stekt ris med egg og grønnsaker — rask og rimelig."},
+  vegtaco_linser:{niva:"Enkel",kjokken:"Meksikansk",tid:25,desc:"Vegetartaco med krydrede linser og friske tilbehør."},
+  pasta_kikerter:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Tomatpasta med kikerter — proteinrik og mettende."},
+  frittata:{niva:"Middels",kjokken:"Norsk",tid:40,desc:"Potetfrittata med ost — mettende og enkel fra ovnen."},
+  kyllingfajita:{niva:"Enkel",kjokken:"Meksikansk",tid:30,desc:"Sizzlende kyllingfajitas med paprika og løk i lefse."},
+  fiskesuppe:{niva:"Middels",kjokken:"Norsk",tid:40,desc:"Kremet fiskesuppe med laks og torsk — norsk kystmat."},
+  veg_pasta_tomat:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Vegansk tomatpasta med squash — enkel og smakfull."},
+  veg_pasta_linser:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Vegansk tomatpasta med røde linser for ekstra protein."},
+  veg_stektris:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Vegansk stekt ris full av fargerike grønnsaker."},
+  veg_kikertcurry:{niva:"Enkel",kjokken:"Indisk",tid:35,desc:"Fyldig kikert- og potetcurry med kokos."},
+  veg_linsetaco:{niva:"Enkel",kjokken:"Meksikansk",tid:25,desc:"Vegansk taco med krydrede linser."},
+  veg_kikertwok:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Rask kikertwok med squash og ris."},
+  veg_linsesuppe:{niva:"Enkel",kjokken:"Indisk",tid:30,desc:"Krydret linse- og kokossuppe som varmer."},
+  veg_kikertsalat:{niva:"Enkel",kjokken:"Salat",tid:20,desc:"Frisk kikertsalat med cherrytomater — lett og proteinrik."},
+  veg_potetcurry:{niva:"Enkel",kjokken:"Indisk",tid:35,desc:"Mild potet- og grønnsakscurry med kokos."},
+  veg_tomatris:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Smakfull tomatris med grønnsaker."},
+  veg_kikertwrap:{niva:"Enkel",kjokken:"Meksikansk",tid:20,desc:"Kikertwraps med sprø salat — rask og enkel."},
+  veg_squashpasta:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Enkel pasta med squash, hvitløk og cherrytomat."},
+  veg_gronnsakwok:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Fargerik grønnsakswok med ris."},
+  veg_baktepoteter:{niva:"Enkel",kjokken:"Norsk",tid:45,desc:"Bakte poteter med kikerter og frisk salsa."},
+  tofu_wok:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Sprøstekt tofu i wok med grønnsaker og ris."},
+  tofu_curry:{niva:"Enkel",kjokken:"Indisk",tid:35,desc:"Kremet tofukarri med kokos og ris."},
+  edamame_ris:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Proteinrik edamame- og grønnsaksris."},
+  tofu_taco:{niva:"Enkel",kjokken:"Meksikansk",tid:30,desc:"Vegansk tofutaco med frisk salsa."},
+  protein_gryte:{niva:"Enkel",kjokken:"Indisk",tid:30,desc:"Proteinrik gryte med linser og edamame i kokostomat."},
+};
+RECIPES.forEach(r=>{ const m=RETT_META[r.id]; if(m){ r.niva=m.niva; r.kjokken=m.kjokken; r.tid=m.tid; r.beskrivelse=m.desc; } });
 
 // Allergener: hvilke råvarer inneholder hva. Grunnmur for allergifiltre — utvides når nye råvarer legges til.
 const ALLERGENER={
@@ -760,6 +807,8 @@ function render(){
     const s=STATS[r.id],card=document.createElement("div");card.className="meal anim";card.style.animationDelay=(idx*0.04)+"s";
     card.innerHTML=`<div class="day"><span class="d">${DAYS[idx].slice(0,3)}</span><span class="n">${DAYS[idx]}</span></div>
       <div class="body"><div class="title">${r.navn}<span class="tagdot">${r.vegan?"Vegansk":TAG_LABEL[r.tag]}</span></div>
+      ${(r.niva||r.kjokken||r.tid)?`<div class="rmeta">${[r.niva,r.kjokken,r.tid?r.tid+" min":null].filter(Boolean).join(" · ")}</div>`:""}
+      ${r.beskrivelse?`<div class="rdesc">${r.beskrivelse}</div>`:""}
       ${macroGrid(s)}<div class="ingredients">${r.ing.map(([id])=>ING[id].n).join(" · ")}</div>
       <div class="foot"><button class="recipe-btn" data-idx="${idx}">Vis oppskrift</button><button class="swap" data-idx="${idx}">↺ Bytt rett</button></div>
       <div class="recipe-panel" id="recipe-${idx}"></div></div>`;
@@ -867,7 +916,6 @@ async function toggleRecipe(idx,btn){
 }
 
 /* ---------- KONTROLLER ---------- */
-document.querySelectorAll("#goal button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("#goal button").forEach(x=>x.classList.remove("is-active"));b.classList.add("is-active");state.goal=b.dataset.v;}));
 document.querySelectorAll("#pref button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("#pref button").forEach(x=>x.classList.remove("is-active"));b.classList.add("is-active");state.pref=b.dataset.v;}));
 document.querySelectorAll('[data-step] button').forEach(b=>b.addEventListener("click",()=>{
   const which=b.closest("[data-step]").dataset.step,d=parseInt(b.dataset.d,10);
