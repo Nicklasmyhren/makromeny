@@ -213,11 +213,37 @@
   .filter-toggle .filter-caret{margin-left:auto;color:var(--muted);transition:transform .2s;}
   .filter-toggle[aria-expanded="true"] .filter-caret{transform:rotate(180deg);}
   .filter-badge{background:var(--spruce);color:#fff;border-radius:999px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 7px;}
-  .filter-panel{margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:10px;background:#fbfcfa;display:flex;flex-direction:column;gap:14px;animation:rise .25s ease both;}
+  .filter-panel{margin-top:10px;padding:16px;border:1px solid var(--line);border-radius:10px;background:#fbfcfa;flex-direction:column;gap:18px;animation:rise .25s ease both;}
+  .filter-panel[hidden]{display:none;}
+  .filter-panel:not([hidden]){display:flex;}
   .filter-group > label{display:block;font-size:12px;font-weight:600;margin-bottom:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
-  .seg.filt button{font-size:12px;padding:7px 9px;}
-  .seg.wrap{flex-wrap:wrap;}
-  .seg.wrap button{flex:0 1 auto;}
+
+  .sliders-row{display:flex;gap:14px;}
+  .slider-block{flex:1;min-width:0;}
+  .slider-block > label{display:block;font-size:12px;font-weight:600;margin-bottom:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .slider-wrap{display:flex;gap:10px;height:132px;}
+  .vslider{writing-mode:vertical-lr;direction:rtl;width:22px;height:132px;margin:0;accent-color:var(--spruce);cursor:pointer;}
+  .slider-ticks{display:flex;flex-direction:column;justify-content:space-between;font-size:11px;color:var(--muted);line-height:1;flex:1;}
+  .slider-ticks span{transition:color .15s,font-weight .15s;}
+  .slider-ticks span.on{color:var(--spruce);font-weight:600;}
+  .slider-ticks span.off{color:#c4ccc2;}
+  .slider-cap{margin-top:9px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--spruce-2);font-weight:500;}
+
+  .kjokken-search{width:100%;border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px;font:inherit;font-size:13px;color:var(--ink);}
+  .kjokken-search:focus{outline:2px solid var(--spruce-2);outline-offset:1px;}
+  .kjokken-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .kjokken-chips:empty{margin-top:0;}
+  .kjokken-chips .kchip{display:inline-flex;align-items:center;gap:5px;background:var(--spruce);color:#fff;border-radius:999px;font-size:12px;padding:3px 6px 3px 10px;font-weight:500;}
+  .kjokken-chips .kchip button{background:none;border:none;color:#fff;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;opacity:.8;}
+  .kjokken-chips .kchip button:hover{opacity:1;}
+  .kjokken-list{max-height:168px;overflow-y:auto;margin-top:8px;border:1px solid var(--line);border-radius:9px;background:#fff;}
+  .kjokken-list .kitem{display:flex;align-items:center;gap:9px;width:100%;text-align:left;cursor:pointer;border:none;background:none;padding:9px 11px;font:inherit;font-size:13px;color:var(--ink);border-bottom:1px solid var(--line);transition:background .12s;}
+  .kjokken-list .kitem:last-child{border-bottom:none;}
+  .kjokken-list .kitem:hover{background:#f4f8f3;}
+  .kjokken-list .kitem.sel{background:#eef4ec;font-weight:600;color:var(--spruce);}
+  .kjokken-list .kitem .flag{font-size:16px;}
+  .kjokken-list .kitem .check{margin-left:auto;color:var(--spruce);opacity:0;}
+  .kjokken-list .kitem.sel .check{opacity:1;}
 </style>
 </head>
 <body>
@@ -279,34 +305,40 @@
           <span class="filter-caret" id="filterCaret">▾</span>
         </button>
         <div class="filter-panel" id="filterPanel" hidden>
-          <div class="filter-group">
-            <label>Vanskelighetsgrad</label>
-            <div class="seg compact filt" id="fNiva">
-              <button data-v="alle" class="is-active">Alle</button>
-              <button data-v="Enkel">Enkel</button>
-              <button data-v="Middels">Middels</button>
+          <div class="sliders-row">
+            <div class="slider-block">
+              <label>Vanskelighet</label>
+              <div class="slider-wrap">
+                <input type="range" class="vslider" id="fNivaSlider" min="1" max="4" step="1" value="4">
+                <div class="slider-ticks">
+                  <span data-lvl="4">Ekspert</span>
+                  <span data-lvl="3">Vanskelig</span>
+                  <span data-lvl="2">Middels</span>
+                  <span data-lvl="1">Enkel</span>
+                </div>
+              </div>
+              <div class="slider-cap" id="fNivaCap">Opp til Ekspert</div>
             </div>
-          </div>
-          <div class="filter-group">
-            <label>Maks tid</label>
-            <div class="seg compact filt" id="fTid">
-              <button data-v="0" class="is-active">Alle</button>
-              <button data-v="20">20 min</button>
-              <button data-v="30">30 min</button>
-              <button data-v="45">45 min</button>
+            <div class="slider-block">
+              <label>Maks tid</label>
+              <div class="slider-wrap">
+                <input type="range" class="vslider" id="fTidSlider" min="1" max="5" step="1" value="5">
+                <div class="slider-ticks">
+                  <span data-lvl="5">90 min</span>
+                  <span data-lvl="4">60 min</span>
+                  <span data-lvl="3">45 min</span>
+                  <span data-lvl="2">30 min</span>
+                  <span data-lvl="1">15 min</span>
+                </div>
+              </div>
+              <div class="slider-cap" id="fTidCap">Ingen grense</div>
             </div>
           </div>
           <div class="filter-group">
             <label>Kjøkken</label>
-            <div class="seg filt wrap" id="fKjokken">
-              <button data-v="alle" class="is-active">Alle</button>
-              <button data-v="Norsk">Norsk</button>
-              <button data-v="Italiensk">Italiensk</button>
-              <button data-v="Meksikansk">Meksikansk</button>
-              <button data-v="Asiatisk">Asiatisk</button>
-              <button data-v="Indisk">Indisk</button>
-              <button data-v="Salat">Salat</button>
-            </div>
+            <input type="text" id="kjokkenSearch" class="kjokken-search" placeholder="Søk etter matland …" autocomplete="off">
+            <div class="kjokken-chips" id="kjokkenChips"></div>
+            <div class="kjokken-list" id="kjokkenList"></div>
           </div>
         </div>
       </div>
@@ -466,18 +498,18 @@ RECIPES.forEach(r=>{ r.vegan = r.ing.every(([id])=> !ANIMALSK.has(id)); });
 // Rett-mal: nye felt (vanskelighetsgrad, kjøkken/stil, tilberedningstid, beskrivelse) koblet på hver rett.
 // Foreløpig fylt her; flyttes til Supabase i neste fase. niva: Enkel/Middels/Avansert. tid: minutter.
 const RETT_META={
-  kylling_ris:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Saftig kyllingfilet med ris og sprø brokkoli — enkel og proteinrik."},
+  kylling_ris:{niva:"Enkel",kjokken:"Kinesisk",tid:25,desc:"Saftig kyllingfilet med ris og sprø brokkoli — enkel og proteinrik."},
   bolognese:{niva:"Enkel",kjokken:"Italiensk",tid:30,desc:"Klassisk kjøttdeigsaus som får godgjøre seg, servert over pasta."},
   taco:{niva:"Enkel",kjokken:"Meksikansk",tid:25,desc:"Fredagsfavoritten — krydret kjøttdeig med friske tilbehør i lefse."},
   laks:{niva:"Enkel",kjokken:"Norsk",tid:40,desc:"Ovnsbakt laks med poteter og grønnsaker — enkelt og næringsrikt."},
   torsk:{niva:"Enkel",kjokken:"Norsk",tid:35,desc:"Mør torsk med kokte poteter og gulrot — norsk husmannskost."},
-  wok:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Rask kyllingwok med fargerike grønnsaker og ris."},
+  wok:{niva:"Enkel",kjokken:"Kinesisk",tid:25,desc:"Rask kyllingwok med fargerike grønnsaker og ris."},
   svin:{niva:"Enkel",kjokken:"Norsk",tid:35,desc:"Saftige svinekoteletter med poteter og dampet brokkoli."},
   kyllinglar:{niva:"Enkel",kjokken:"Norsk",tid:50,desc:"Sprøstekte kyllinglår med ovnsbakte poteter og gulrot."},
   grateng:{niva:"Middels",kjokken:"Norsk",tid:45,desc:"Kremet fiskegrateng med makaroni — trøstemat fra ovnen."},
   linsegryte:{niva:"Enkel",kjokken:"Indisk",tid:30,desc:"Fyldig linsegryte med kokos og tomat, mild og mettende."},
   kikertgryte:{niva:"Enkel",kjokken:"Indisk",tid:30,desc:"Krydret kikertgryte med ris — rimelig og proteinrik."},
-  kyllingsalat:{niva:"Enkel",kjokken:"Salat",tid:20,desc:"Frisk kyllingsalat med cherrytomater og sprø salat."},
+  kyllingsalat:{niva:"Enkel",kjokken:"Gresk",tid:20,desc:"Frisk kyllingsalat med cherrytomater og sprø salat."},
   omelett:{niva:"Enkel",kjokken:"Norsk",tid:20,desc:"Luftig omelett med ost og grønnsaker — rask og proteinrik."},
   pasta_squash:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Enkel tomatpasta med squash og revet ost."},
   kyllinggryte:{niva:"Enkel",kjokken:"Norsk",tid:30,desc:"Mettende kyllinggryte med paprika, tomat og ris."},
@@ -489,7 +521,7 @@ const RETT_META={
   torsk_ris:{niva:"Enkel",kjokken:"Norsk",tid:30,desc:"Dampet torsk med ris og grønnsaker — lett og sunt."},
   kylling_poteter:{niva:"Enkel",kjokken:"Norsk",tid:45,desc:"Kyllingfilet med ovnspoteter og grønnsaker."},
   svin_ris:{niva:"Enkel",kjokken:"Norsk",tid:30,desc:"Svinekotelett med ris og stekt paprika."},
-  stektris_egg:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Stekt ris med egg og grønnsaker — rask og rimelig."},
+  stektris_egg:{niva:"Enkel",kjokken:"Kinesisk",tid:25,desc:"Stekt ris med egg og grønnsaker — rask og rimelig."},
   vegtaco_linser:{niva:"Enkel",kjokken:"Meksikansk",tid:25,desc:"Vegetartaco med krydrede linser og friske tilbehør."},
   pasta_kikerter:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Tomatpasta med kikerter — proteinrik og mettende."},
   frittata:{niva:"Middels",kjokken:"Norsk",tid:40,desc:"Potetfrittata med ost — mettende og enkel fra ovnen."},
@@ -497,21 +529,21 @@ const RETT_META={
   fiskesuppe:{niva:"Middels",kjokken:"Norsk",tid:40,desc:"Kremet fiskesuppe med laks og torsk — norsk kystmat."},
   veg_pasta_tomat:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Vegansk tomatpasta med squash — enkel og smakfull."},
   veg_pasta_linser:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Vegansk tomatpasta med røde linser for ekstra protein."},
-  veg_stektris:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Vegansk stekt ris full av fargerike grønnsaker."},
+  veg_stektris:{niva:"Enkel",kjokken:"Kinesisk",tid:25,desc:"Vegansk stekt ris full av fargerike grønnsaker."},
   veg_kikertcurry:{niva:"Enkel",kjokken:"Indisk",tid:35,desc:"Fyldig kikert- og potetcurry med kokos."},
   veg_linsetaco:{niva:"Enkel",kjokken:"Meksikansk",tid:25,desc:"Vegansk taco med krydrede linser."},
-  veg_kikertwok:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Rask kikertwok med squash og ris."},
+  veg_kikertwok:{niva:"Enkel",kjokken:"Kinesisk",tid:25,desc:"Rask kikertwok med squash og ris."},
   veg_linsesuppe:{niva:"Enkel",kjokken:"Indisk",tid:30,desc:"Krydret linse- og kokossuppe som varmer."},
-  veg_kikertsalat:{niva:"Enkel",kjokken:"Salat",tid:20,desc:"Frisk kikertsalat med cherrytomater — lett og proteinrik."},
+  veg_kikertsalat:{niva:"Enkel",kjokken:"Gresk",tid:20,desc:"Frisk kikertsalat med cherrytomater — lett og proteinrik."},
   veg_potetcurry:{niva:"Enkel",kjokken:"Indisk",tid:35,desc:"Mild potet- og grønnsakscurry med kokos."},
-  veg_tomatris:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Smakfull tomatris med grønnsaker."},
+  veg_tomatris:{niva:"Enkel",kjokken:"Norsk",tid:25,desc:"Smakfull tomatris med grønnsaker."},
   veg_kikertwrap:{niva:"Enkel",kjokken:"Meksikansk",tid:20,desc:"Kikertwraps med sprø salat — rask og enkel."},
   veg_squashpasta:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Enkel pasta med squash, hvitløk og cherrytomat."},
-  veg_gronnsakwok:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Fargerik grønnsakswok med ris."},
+  veg_gronnsakwok:{niva:"Enkel",kjokken:"Kinesisk",tid:25,desc:"Fargerik grønnsakswok med ris."},
   veg_baktepoteter:{niva:"Enkel",kjokken:"Norsk",tid:45,desc:"Bakte poteter med kikerter og frisk salsa."},
-  tofu_wok:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Sprøstekt tofu i wok med grønnsaker og ris."},
+  tofu_wok:{niva:"Enkel",kjokken:"Thailandsk",tid:25,desc:"Sprøstekt tofu i wok med grønnsaker og ris."},
   tofu_curry:{niva:"Enkel",kjokken:"Indisk",tid:35,desc:"Kremet tofukarri med kokos og ris."},
-  edamame_ris:{niva:"Enkel",kjokken:"Asiatisk",tid:25,desc:"Proteinrik edamame- og grønnsaksris."},
+  edamame_ris:{niva:"Enkel",kjokken:"Japansk",tid:25,desc:"Proteinrik edamame- og grønnsaksris."},
   tofu_taco:{niva:"Enkel",kjokken:"Meksikansk",tid:30,desc:"Vegansk tofutaco med frisk salsa."},
   protein_gryte:{niva:"Enkel",kjokken:"Indisk",tid:30,desc:"Proteinrik gryte med linser og edamame i kokostomat."},
 };
@@ -684,9 +716,10 @@ async function buildPlan(state){
   const avoid=Array.isArray(interp.avoid)?interp.avoid.filter(a=>a in ALLERGENER):[];
   const allergyOk=r=> recipeAllergyInfo(r,avoid).safe;
   const ok=r=> dietOk(r) && allergyOk(r);
-  // Brukerens filter (vanskelighetsgrad, tid, kjøkken). "alle"/0 = ingen påvirkning.
-  const fNiva=state.fNiva||"alle", fKjokken=state.fKjokken||"alle", fTid=Number(state.fTid)||0;
-  const filterOk=r=> (fNiva==="alle"||r.niva===fNiva) && (fKjokken==="alle"||r.kjokken===fKjokken) && (fTid===0||(r.tid&&r.tid<=fTid));
+  // Brukerens filter (vanskelighet, tid, kjøkken). Tak-verdier på topp = ingen påvirkning.
+  const NIVA_RANK={Enkel:1,Middels:2,Vanskelig:3,Ekspert:4};
+  const fNiva=Number(state.fNiva)||4, fTid=Number(state.fTid)||90, fKj=Array.isArray(state.fKjokken)?state.fKjokken:[];
+  const filterOk=r=> (NIVA_RANK[r.niva]||1)<=fNiva && (!r.tid||r.tid<=fTid) && (fKj.length===0||fKj.includes(r.kjokken));
   const okF=r=> ok(r) && filterOk(r);
   // Poolen til frie valg respekterer diett, allergier og filter; låste retter sjekkes mot samme regel.
   const pool=RECIPES.filter(okF);
@@ -759,7 +792,7 @@ function buildShopping(plan,persons){
 }
 
 /* ---------- TILSTAND ---------- */
-const state={goal:"holde",dinners:5,persons:2,pref:"balansert",freeText:"",fNiva:"alle",fTid:0,fKjokken:"alle",current:null};
+const state={goal:"holde",dinners:5,persons:2,pref:"balansert",freeText:"",fNiva:4,fTidLvl:5,fTid:90,fKjokken:[],current:null};
 let profileContext="";  // fast "om meg/familien"-tekst fra profilen, tas med i hver planlegging
 let recentRecipeIds=new Set();  // retter fra nylig lagrede menyer — straffes så de ikke gjentas
 
@@ -899,8 +932,9 @@ function render(){
 function swapDinner(idx){
   const {plan,pref,daily,vegOnly,veganOnly,avoid}=state.current,used=new Set(plan.map(r=>r.id));
   const av=Array.isArray(avoid)?avoid:[];
-  const fNiva=state.fNiva||"alle", fKjokken=state.fKjokken||"alle", fTid=Number(state.fTid)||0;
-  const filterOk=r=> (fNiva==="alle"||r.niva===fNiva) && (fKjokken==="alle"||r.kjokken===fKjokken) && (fTid===0||(r.tid&&r.tid<=fTid));
+  const NIVA_RANK={Enkel:1,Middels:2,Vanskelig:3,Ekspert:4};
+  const fNiva=Number(state.fNiva)||4, fTid=Number(state.fTid)||90, fKj=Array.isArray(state.fKjokken)?state.fKjokken:[];
+  const filterOk=r=> (NIVA_RANK[r.niva]||1)<=fNiva && (!r.tid||r.tid<=fTid) && (fKj.length===0||fKj.includes(r.kjokken));
   const ok=r=> (veganOnly ? r.vegan : (vegOnly ? r.veg : true)) && recipeAllergyInfo(r,av).safe && filterOk(r);
   let pool=RECIPES.filter(r=>ok(r)&&!used.has(r.id));
   if(!pool.length)pool=RECIPES.filter(ok);
@@ -974,28 +1008,85 @@ async function toggleRecipe(idx,btn){
 document.querySelectorAll("#pref button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("#pref button").forEach(x=>x.classList.remove("is-active"));b.classList.add("is-active");state.pref=b.dataset.v;}));
 
 /* ---------- FILTER ---------- */
-const filterToggle=document.getElementById("filterToggle"), filterPanel=document.getElementById("filterPanel"), filterCaret=document.getElementById("filterCaret"), filterBadge=document.getElementById("filterBadge");
+const CUISINES=[
+  {n:"Norsk",f:"🇳🇴"},{n:"Italiensk",f:"🇮🇹"},{n:"Meksikansk",f:"🇲🇽"},{n:"Indisk",f:"🇮🇳"},
+  {n:"Kinesisk",f:"🇨🇳"},{n:"Japansk",f:"🇯🇵"},{n:"Thailandsk",f:"🇹🇭"},{n:"Amerikansk",f:"🇺🇸"},
+  {n:"Fransk",f:"🇫🇷"},{n:"Gresk",f:"🇬🇷"},{n:"Spansk",f:"🇪🇸"},{n:"Tyrkisk",f:"🇹🇷"},
+  {n:"Koreansk",f:"🇰🇷"},{n:"Vietnamesisk",f:"🇻🇳"},{n:"Libanesisk",f:"🇱🇧"},{n:"Brasiliansk",f:"🇧🇷"},{n:"Marokkansk",f:"🇲🇦"}
+];
+const NIVA_NAVN={1:"Enkel",2:"Middels",3:"Vanskelig",4:"Ekspert"};
+const TID_MIN={1:15,2:30,3:45,4:60,5:90};
+state.fKjokken=[]; // liste av valgte matland; tom = alle
+
+const filterToggle=document.getElementById("filterToggle"), filterPanel=document.getElementById("filterPanel"), filterBadge=document.getElementById("filterBadge");
 filterToggle.addEventListener("click",()=>{
-  const open=filterPanel.hidden; filterPanel.hidden=!open;
-  filterToggle.setAttribute("aria-expanded",String(open));
+  const willOpen=filterPanel.hidden;
+  filterPanel.hidden=!willOpen;
+  filterToggle.setAttribute("aria-expanded",String(willOpen));
 });
+
 function updateFilterBadge(){
   let n=0;
-  if((state.fNiva||"alle")!=="alle")n++;
-  if((Number(state.fTid)||0)!==0)n++;
-  if((state.fKjokken||"alle")!=="alle")n++;
+  if((Number(state.fNiva)||4)<4)n++;
+  if((Number(state.fTidLvl)||5)<5)n++;
+  if((state.fKjokken||[]).length)n++;
   if(n>0){ filterBadge.hidden=false; filterBadge.textContent=n+(n===1?" aktiv":" aktive"); }
   else filterBadge.hidden=true;
 }
-function bindFilterSeg(groupId,apply){
-  document.querySelectorAll("#"+groupId+" button").forEach(b=>b.addEventListener("click",()=>{
-    document.querySelectorAll("#"+groupId+" button").forEach(x=>x.classList.remove("is-active"));
-    b.classList.add("is-active"); apply(b.dataset.v); updateFilterBadge();
-  }));
+
+// Glidebryter: vanskelighet (tak = valgt nivå)
+const fNivaSlider=document.getElementById("fNivaSlider"), fNivaCap=document.getElementById("fNivaCap");
+function paintNiva(){
+  const v=Number(fNivaSlider.value); state.fNiva=v;
+  fNivaSlider.closest(".slider-block").querySelectorAll(".slider-ticks span").forEach(s=>{
+    const lvl=Number(s.dataset.lvl);
+    s.classList.toggle("on",lvl===v);
+    s.classList.toggle("off",lvl>v);
+  });
+  fNivaCap.textContent = v===4 ? "Opp til Ekspert (alle)" : "Opp til "+NIVA_NAVN[v];
+  updateFilterBadge();
 }
-bindFilterSeg("fNiva",v=>state.fNiva=v);
-bindFilterSeg("fTid",v=>state.fTid=Number(v));
-bindFilterSeg("fKjokken",v=>state.fKjokken=v);
+fNivaSlider.addEventListener("input",paintNiva);
+
+// Glidebryter: tid (tak = valgt minutt)
+const fTidSlider=document.getElementById("fTidSlider"), fTidCap=document.getElementById("fTidCap");
+function paintTid(){
+  const lvl=Number(fTidSlider.value); state.fTidLvl=lvl; state.fTid=TID_MIN[lvl];
+  fTidSlider.closest(".slider-block").querySelectorAll(".slider-ticks span").forEach(s=>{
+    const l=Number(s.dataset.lvl);
+    s.classList.toggle("on",l===lvl);
+    s.classList.toggle("off",l>lvl);
+  });
+  fTidCap.textContent = lvl===5 ? "Ingen grense" : "Maks "+TID_MIN[lvl]+" min";
+  updateFilterBadge();
+}
+fTidSlider.addEventListener("input",paintTid);
+
+// Kjøkken: søkbar flervalgs-liste med flagg
+const kjSearch=document.getElementById("kjokkenSearch"), kjList=document.getElementById("kjokkenList"), kjChips=document.getElementById("kjokkenChips");
+function renderKjChips(){
+  kjChips.innerHTML=state.fKjokken.map(n=>{
+    const c=CUISINES.find(x=>x.n===n);
+    return `<span class="kchip">${c?c.f:""} ${n}<button data-n="${n}" aria-label="Fjern">×</button></span>`;
+  }).join("");
+  kjChips.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>toggleKj(b.dataset.n)));
+}
+function renderKjList(){
+  const q=(kjSearch.value||"").toLowerCase().trim();
+  const items=CUISINES.filter(c=>c.n.toLowerCase().includes(q));
+  kjList.innerHTML=items.map(c=>{
+    const sel=state.fKjokken.includes(c.n);
+    return `<button type="button" class="kitem${sel?" sel":""}" data-n="${c.n}"><span class="flag">${c.f}</span>${c.n}<span class="check">✓</span></button>`;
+  }).join("") || `<div style="padding:10px 11px;color:var(--muted);font-size:12.5px">Ingen treff</div>`;
+  kjList.querySelectorAll(".kitem").forEach(b=>b.addEventListener("click",()=>toggleKj(b.dataset.n)));
+}
+function toggleKj(n){
+  const i=state.fKjokken.indexOf(n);
+  if(i>=0) state.fKjokken.splice(i,1); else state.fKjokken.push(n);
+  renderKjChips(); renderKjList(); updateFilterBadge();
+}
+kjSearch.addEventListener("input",renderKjList);
+renderKjChips(); renderKjList();
 document.querySelectorAll('[data-step] button').forEach(b=>b.addEventListener("click",()=>{
   const which=b.closest("[data-step]").dataset.step,d=parseInt(b.dataset.d,10);
   if(which==="dinners"){state.dinners=Math.min(7,Math.max(3,state.dinners+d));document.getElementById("dinnersVal").textContent=state.dinners;}
