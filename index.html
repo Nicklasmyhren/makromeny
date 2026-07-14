@@ -208,6 +208,16 @@
   .obs-price{font-size:12px;color:var(--muted);margin-top:9px;border-top:1px dashed #ecdcc4;padding-top:8px;}
   .meal .body .rmeta{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--spruce-2);margin:-2px 0 6px;text-transform:uppercase;}
   .meal .body .rdesc{font-size:12.5px;color:var(--ink);margin-bottom:9px;line-height:1.45;}
+  .filter-toggle{width:100%;display:flex;align-items:center;gap:8px;cursor:pointer;border:1px solid var(--line);background:#fbfcfa;color:var(--ink);border-radius:9px;padding:10px 12px;font:inherit;font-size:13px;font-weight:600;transition:border-color .15s,background .15s;}
+  .filter-toggle:hover{border-color:var(--spruce-2);}
+  .filter-toggle .filter-caret{margin-left:auto;color:var(--muted);transition:transform .2s;}
+  .filter-toggle[aria-expanded="true"] .filter-caret{transform:rotate(180deg);}
+  .filter-badge{background:var(--spruce);color:#fff;border-radius:999px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 7px;}
+  .filter-panel{margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:10px;background:#fbfcfa;display:flex;flex-direction:column;gap:14px;animation:rise .25s ease both;}
+  .filter-group > label{display:block;font-size:12px;font-weight:600;margin-bottom:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .seg.filt button{font-size:12px;padding:7px 9px;}
+  .seg.wrap{flex-wrap:wrap;}
+  .seg.wrap button{flex:0 1 auto;}
 </style>
 </head>
 <body>
@@ -259,6 +269,45 @@
           <button data-v="karbo">Lite karbo</button>
           <button data-v="billig">Billigst</button>
           <button data-v="balansert" class="is-active">Balansert</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="false">
+          <span>⚙ Filter</span>
+          <span class="filter-badge" id="filterBadge" hidden></span>
+          <span class="filter-caret" id="filterCaret">▾</span>
+        </button>
+        <div class="filter-panel" id="filterPanel" hidden>
+          <div class="filter-group">
+            <label>Vanskelighetsgrad</label>
+            <div class="seg compact filt" id="fNiva">
+              <button data-v="alle" class="is-active">Alle</button>
+              <button data-v="Enkel">Enkel</button>
+              <button data-v="Middels">Middels</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Maks tid</label>
+            <div class="seg compact filt" id="fTid">
+              <button data-v="0" class="is-active">Alle</button>
+              <button data-v="20">20 min</button>
+              <button data-v="30">30 min</button>
+              <button data-v="45">45 min</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Kjøkken</label>
+            <div class="seg filt wrap" id="fKjokken">
+              <button data-v="alle" class="is-active">Alle</button>
+              <button data-v="Norsk">Norsk</button>
+              <button data-v="Italiensk">Italiensk</button>
+              <button data-v="Meksikansk">Meksikansk</button>
+              <button data-v="Asiatisk">Asiatisk</button>
+              <button data-v="Indisk">Indisk</button>
+              <button data-v="Salat">Salat</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -635,8 +684,12 @@ async function buildPlan(state){
   const avoid=Array.isArray(interp.avoid)?interp.avoid.filter(a=>a in ALLERGENER):[];
   const allergyOk=r=> recipeAllergyInfo(r,avoid).safe;
   const ok=r=> dietOk(r) && allergyOk(r);
-  // Poolen til frie valg respekterer både diett og allergier; låste retter sjekkes mot samme regel.
-  const pool=RECIPES.filter(ok);
+  // Brukerens filter (vanskelighetsgrad, tid, kjøkken). "alle"/0 = ingen påvirkning.
+  const fNiva=state.fNiva||"alle", fKjokken=state.fKjokken||"alle", fTid=Number(state.fTid)||0;
+  const filterOk=r=> (fNiva==="alle"||r.niva===fNiva) && (fKjokken==="alle"||r.kjokken===fKjokken) && (fTid===0||(r.tid&&r.tid<=fTid));
+  const okF=r=> ok(r) && filterOk(r);
+  // Poolen til frie valg respekterer diett, allergier og filter; låste retter sjekkes mot samme regel.
+  const pool=RECIPES.filter(okF);
   const warn = pool.length===0 ? "tom" : (pool.length<N ? "faa" : null);
   // Ingen trygge retter i det hele tatt -> ikke server noe utrygt; gi tydelig beskjed i stedet.
   if(pool.length===0){
@@ -706,7 +759,7 @@ function buildShopping(plan,persons){
 }
 
 /* ---------- TILSTAND ---------- */
-const state={goal:"holde",dinners:5,persons:2,pref:"balansert",freeText:"",current:null};
+const state={goal:"holde",dinners:5,persons:2,pref:"balansert",freeText:"",fNiva:"alle",fTid:0,fKjokken:"alle",current:null};
 let profileContext="";  // fast "om meg/familien"-tekst fra profilen, tas med i hver planlegging
 let recentRecipeIds=new Set();  // retter fra nylig lagrede menyer — straffes så de ikke gjentas
 
@@ -846,7 +899,9 @@ function render(){
 function swapDinner(idx){
   const {plan,pref,daily,vegOnly,veganOnly,avoid}=state.current,used=new Set(plan.map(r=>r.id));
   const av=Array.isArray(avoid)?avoid:[];
-  const ok=r=> (veganOnly ? r.vegan : (vegOnly ? r.veg : true)) && recipeAllergyInfo(r,av).safe;
+  const fNiva=state.fNiva||"alle", fKjokken=state.fKjokken||"alle", fTid=Number(state.fTid)||0;
+  const filterOk=r=> (fNiva==="alle"||r.niva===fNiva) && (fKjokken==="alle"||r.kjokken===fKjokken) && (fTid===0||(r.tid&&r.tid<=fTid));
+  const ok=r=> (veganOnly ? r.vegan : (vegOnly ? r.veg : true)) && recipeAllergyInfo(r,av).safe && filterOk(r);
   let pool=RECIPES.filter(r=>ok(r)&&!used.has(r.id));
   if(!pool.length)pool=RECIPES.filter(ok);
   if(!pool.length) return;
@@ -917,6 +972,30 @@ async function toggleRecipe(idx,btn){
 
 /* ---------- KONTROLLER ---------- */
 document.querySelectorAll("#pref button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("#pref button").forEach(x=>x.classList.remove("is-active"));b.classList.add("is-active");state.pref=b.dataset.v;}));
+
+/* ---------- FILTER ---------- */
+const filterToggle=document.getElementById("filterToggle"), filterPanel=document.getElementById("filterPanel"), filterCaret=document.getElementById("filterCaret"), filterBadge=document.getElementById("filterBadge");
+filterToggle.addEventListener("click",()=>{
+  const open=filterPanel.hidden; filterPanel.hidden=!open;
+  filterToggle.setAttribute("aria-expanded",String(open));
+});
+function updateFilterBadge(){
+  let n=0;
+  if((state.fNiva||"alle")!=="alle")n++;
+  if((Number(state.fTid)||0)!==0)n++;
+  if((state.fKjokken||"alle")!=="alle")n++;
+  if(n>0){ filterBadge.hidden=false; filterBadge.textContent=n+(n===1?" aktiv":" aktive"); }
+  else filterBadge.hidden=true;
+}
+function bindFilterSeg(groupId,apply){
+  document.querySelectorAll("#"+groupId+" button").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll("#"+groupId+" button").forEach(x=>x.classList.remove("is-active"));
+    b.classList.add("is-active"); apply(b.dataset.v); updateFilterBadge();
+  }));
+}
+bindFilterSeg("fNiva",v=>state.fNiva=v);
+bindFilterSeg("fTid",v=>state.fTid=Number(v));
+bindFilterSeg("fKjokken",v=>state.fKjokken=v);
 document.querySelectorAll('[data-step] button').forEach(b=>b.addEventListener("click",()=>{
   const which=b.closest("[data-step]").dataset.step,d=parseInt(b.dataset.d,10);
   if(which==="dinners"){state.dinners=Math.min(7,Math.max(3,state.dinners+d));document.getElementById("dinnersVal").textContent=state.dinners;}
