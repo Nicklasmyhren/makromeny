@@ -1324,25 +1324,46 @@ function pantryMelding(tekst,type){
 function ingListe(){ return window.MM_getIngredienser?window.MM_getIngredienser():[]; }
 function ingInfo(id){ return ingListe().find(x=>x.id===id); }
 
+// Varer som selges i stykker/poser (f.eks. «12 stk», «1 pose») telles i stk, ikke gram.
+// Vi lagrer alltid gram i basen, men lar deg skrive antall.
+function stkInfo(it){
+  if(!it||!it.pk||!it.pg) return null;
+  const m=String(it.pk).match(/^\s*(\d+(?:[.,]\d+)?)\s*(stk|pose|poser)\b/i);
+  if(!m) return null;
+  const antall=parseFloat(m[1].replace(",","."));
+  if(!antall||antall<=0) return null;
+  return { enhet:/pose/i.test(m[2])?"pose":"stk", perEnhet: it.pg/antall };
+}
+
 function renderPantryItems(){
   if(!pItems) return;
   if(!pantry.length){ pItems.innerHTML='<div class="pantry-tom">Ingen varer lagt inn ennå.</div>'; return; }
   pItems.innerHTML=pantry.map(p=>{
     const it=ingInfo(p.ingrediens_id); if(!it) return "";
+    const st=stkInfo(it);
+    if(st){
+      const antall=Math.round((p.mengde/st.perEnhet)*10)/10;
+      return `<div class="pantry-row" data-id="${p.ingrediens_id}" data-per="${st.perEnhet}">
+        <span class="navn">${it.navn}<small>≈ ${Math.round(p.mengde)} g</small></span>
+        <input class="mengde" type="number" min="0" step="1" value="${antall}">
+        <span class="enhet">${st.enhet}</span>
+        <button class="fjern" aria-label="Fjern">×</button>
+      </div>`;
+    }
     const pakker=it.pg?(p.mengde/it.pg):0;
-    const hint=it.pg?`≈ ${pakker<1?pakker.toFixed(1):Math.round(pakker*10)/10} × ${it.pk}`:"";
-    return `<div class="pantry-row" data-id="${p.ingrediens_id}">
+    const hint=it.pg?`≈ ${Math.round(pakker*10)/10} × ${it.pk}`:"";
+    return `<div class="pantry-row" data-id="${p.ingrediens_id}" data-per="1">
       <span class="navn">${it.navn}<small>${hint}</small></span>
-      <input class="mengde" type="number" min="0" step="10" value="${p.mengde}">
+      <input class="mengde" type="number" min="0" step="10" value="${Math.round(p.mengde)}">
       <span class="enhet">g</span>
       <button class="fjern" aria-label="Fjern">×</button>
     </div>`;
   }).join("");
   pItems.querySelectorAll(".pantry-row").forEach(row=>{
-    const id=row.dataset.id;
+    const id=row.dataset.id, per=Number(row.dataset.per)||1;
     row.querySelector(".mengde").addEventListener("change",e=>{
       const v=Math.max(0,Number(e.target.value)||0);
-      if(v===0) fjernPantry(id); else settPantry(id,v);
+      if(v===0) fjernPantry(id); else settPantry(id, Math.round(v*per));
     });
     row.querySelector(".fjern").addEventListener("click",()=>fjernPantry(id));
   });
