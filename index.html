@@ -277,11 +277,6 @@
   .r-spart{margin-top:9px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--spruce-2);text-align:center;}
   .r-spart b{color:var(--spruce);}
   .r-line .r-name em{font-style:normal;font-size:10.5px;color:var(--spruce-2);}
-  .handlet-boks{max-width:440px;margin-top:2px;}
-  .handlet-btn{width:100%;cursor:pointer;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--spruce);font:inherit;font-weight:600;font-size:14px;padding:12px;transition:border-color .15s,background .15s;}
-  .handlet-btn:hover:not([disabled]){border-color:var(--spruce-2);background:#f4f8f3;}
-  .handlet-btn[disabled]{opacity:.85;cursor:default;}
-  .handlet-hint{font-size:11.5px;color:var(--muted);margin:7px 0 0;text-align:center;line-height:1.45;}
 </style>
 </head>
 <body>
@@ -1047,7 +1042,8 @@ function render(){
   el.appendChild(week);
 
   const useBar=document.createElement("div");useBar.className="use-menu-bar anim";
-  useBar.innerHTML=`<button class="use-menu" id="useMenuBtn">Bruk denne menyen</button><span class="use-menu-hint">Lagrer uka i historikken, så neste meny varierer rettene.</span>`;
+  const trekkerFra = state.brukHarHjemme && Object.keys(shop.brukt||{}).length>0;
+  useBar.innerHTML=`<button class="use-menu" id="useMenuBtn">Bruk denne menyen</button><span class="use-menu-hint">Lagrer uka i historikken, så neste meny varierer rettene.${trekkerFra?" Trekker også fra det du har hjemme.":""}</span>`;
   el.appendChild(useBar);
 
   const sh2=document.createElement("div");sh2.className="section-h anim";
@@ -1061,32 +1057,22 @@ function render(){
     <div class="r-foot">Tilsvarer <b>${fmt(perPortion)} kr</b> per porsjon · ${persons*N} porsjoner totalt</div>`;
   el.appendChild(rec);
 
-  // Knapp for å trekke brukte varer fra beholdningen
-  if(state.brukHarHjemme && Object.keys(shop.brukt||{}).length){
-    const boks=document.createElement("div"); boks.className="handlet-boks anim";
-    boks.innerHTML=`<button class="handlet-btn" id="handletBtn">✓ Jeg handler denne</button>
-      <p class="handlet-hint">Trekker varene du brukte fra «Har hjemme» i profilen din.</p>`;
-    el.appendChild(boks);
-    const b=boks.querySelector("#handletBtn");
-    b.addEventListener("click",async()=>{
-      b.disabled=true; b.textContent="Oppdaterer …";
-      const ok = window.MM_forbrukHarHjemme ? await window.MM_forbrukHarHjemme(shop.brukt) : false;
-      if(ok){ b.textContent="✓ Beholdningen er oppdatert";
-        boks.querySelector(".handlet-hint").textContent="Varene er trukket fra profilen din."; }
-      else { b.disabled=false; b.textContent="✓ Jeg handler denne";
-        boks.querySelector(".handlet-hint").textContent="Kunne ikke oppdatere — er du logget inn?"; }
-    });
-  }
-
   el.querySelectorAll(".swap").forEach(b=>b.addEventListener("click",()=>swapDinner(parseInt(b.dataset.idx,10))));
   el.querySelectorAll(".recipe-btn").forEach(b=>b.addEventListener("click",()=>toggleRecipe(parseInt(b.dataset.idx,10),b)));
 
   const umb=document.getElementById("useMenuBtn");
   if(umb) umb.addEventListener("click",async()=>{
     const ids=plan.map(r=>r.id);
-    umb.disabled=true;
+    umb.disabled=true; umb.textContent="Lagrer …";
     const res = window.MM_saveCurrentMenu ? await window.MM_saveCurrentMenu(ids) : {ok:false,reason:"unavailable"};
-    if(res&&res.ok){ umb.textContent="✓ Lagret i historikken"; }
+    if(res&&res.ok){
+      // Samme handling trekker også fra beholdningen, når den er i bruk.
+      let trakkFra=false;
+      if(trekkerFra && window.MM_forbrukHarHjemme){
+        trakkFra = await window.MM_forbrukHarHjemme(shop.brukt);
+      }
+      umb.textContent = trakkFra ? "✓ Lagret — beholdningen er oppdatert" : "✓ Lagret i historikken";
+    }
     else if(res&&res.reason==="login"){ umb.textContent="Bruk denne menyen"; umb.disabled=false; }
     else { umb.textContent="Kunne ikke lagre — prøv igjen"; setTimeout(()=>{umb.textContent="Bruk denne menyen";umb.disabled=false;},1800); }
   });
@@ -1526,7 +1512,7 @@ async function loadPantry(user){
 pSearch?.addEventListener("input",renderPantryFinner);
 renderPantryItems();
 
-// Trekker forbrukte mengder fra beholdningen (kalles fra «Jeg handler denne»).
+// Trekker forbrukte mengder fra beholdningen (kalles fra «Bruk denne menyen»).
 window.MM_forbrukHarHjemme=async function(brukt){
   if(!supabase||!brukt) return false;
   const { data:{ user } }=await supabase.auth.getUser();
