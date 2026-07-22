@@ -1043,7 +1043,10 @@ function render(){
 
   const useBar=document.createElement("div");useBar.className="use-menu-bar anim";
   const trekkerFra = state.brukHarHjemme && Object.keys(shop.brukt||{}).length>0;
-  useBar.innerHTML=`<button class="use-menu" id="useMenuBtn">Bruk denne menyen</button><span class="use-menu-hint">Lagrer uka i historikken, så neste meny varierer rettene.${trekkerFra?" Trekker også fra det du har hjemme.":""}</span>`;
+  const useHint = trekkerFra
+    ? "Lagrer uka i historikken så neste meny varierer rettene, og trekker de brukte varene fra «Har hjemme»."
+    : "Lagrer uka i historikken, så neste meny varierer rettene.";
+  useBar.innerHTML=`<button class="use-menu" id="useMenuBtn">Bruk denne menyen</button><span class="use-menu-hint">${useHint}</span>`;
   el.appendChild(useBar);
 
   const sh2=document.createElement("div");sh2.className="section-h anim";
