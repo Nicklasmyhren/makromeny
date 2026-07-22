@@ -244,6 +244,29 @@
   .kjokken-list .kitem .flag{font-size:16px;}
   .kjokken-list .kitem .check{margin-left:auto;color:var(--spruce);opacity:0;}
   .kjokken-list .kitem.sel .check{opacity:1;}
+  .pantry{margin-top:18px;border-top:1px solid var(--line);padding-top:16px;}
+  .pantry > label{display:block;font-size:13px;font-weight:600;margin-bottom:4px;}
+  .pantry-sub{font-size:12.5px;color:var(--muted);margin:0 0 10px;line-height:1.45;}
+  .pantry-search{width:100%;border:1px solid var(--line);border-radius:9px;background:#fbfcfa;padding:9px 11px;font:inherit;font-size:13px;color:var(--ink);}
+  .pantry-search:focus{outline:2px solid var(--spruce-2);outline-offset:1px;}
+  .pantry-list{max-height:170px;overflow-y:auto;margin-top:6px;border:1px solid var(--line);border-radius:9px;background:#fff;}
+  .pantry-list[hidden]{display:none;}
+  .pantry-list .pitem{display:flex;align-items:center;gap:8px;width:100%;text-align:left;cursor:pointer;border:none;background:none;padding:9px 11px;font:inherit;font-size:13px;color:var(--ink);border-bottom:1px solid var(--line);}
+  .pantry-list .pitem:last-child{border-bottom:none;}
+  .pantry-list .pitem:hover{background:#f4f8f3;}
+  .pantry-list .pitem .pk{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+  .pantry-items{margin-top:10px;display:flex;flex-direction:column;gap:7px;}
+  .pantry-row{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:9px;background:#fbfcfa;padding:8px 10px;}
+  .pantry-row .navn{font-size:13px;font-weight:500;flex:1;min-width:0;}
+  .pantry-row .navn small{display:block;font-weight:400;font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .pantry-row input.mengde{width:76px;border:1px solid var(--line);border-radius:7px;padding:6px 7px;font:inherit;font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;background:#fff;color:var(--ink);}
+  .pantry-row .enhet{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+  .pantry-row .fjern{background:none;border:none;cursor:pointer;color:var(--muted);font-size:17px;line-height:1;padding:0 3px;}
+  .pantry-row .fjern:hover{color:var(--kroner);}
+  .pantry-tom{font-size:12.5px;color:var(--muted);font-style:italic;padding:4px 0;}
+  .pantry-msg{font-size:12.5px;margin-top:8px;min-height:16px;}
+  .pantry-msg.ok{color:var(--spruce-2);}
+  .pantry-msg.err{color:var(--kroner);}
 </style>
 </head>
 <body>
@@ -381,6 +404,16 @@
     <p class="sub">Skriv litt om deg og familien — kosthold, trening, hverdag, og hva dere liker eller ikke liker. Dette tas med i <b>hver meny</b> du lager, helt til du endrer det.</p>
     <label>Om deg og familien</label>
     <textarea id="profileAbout" rows="6" placeholder="F.eks: Vi er en familie på 4 som spiser vegansk. Jeg trener styrke fire ganger i uka. Hektiske hverdager, så vi vil ha enkle middager. Vi elsker pasta og curry, men liker ikke sopp."></textarea>
+
+    <div class="pantry">
+      <label>Har hjemme</label>
+      <p class="pantry-sub">Legg inn varer du har fra før. Menyen tar hensyn til dem, og handlelista trekker fra det du allerede har.</p>
+      <input type="text" id="pantrySearch" class="pantry-search" placeholder="Søk etter vare …" autocomplete="off">
+      <div class="pantry-list" id="pantryFinner" hidden></div>
+      <div class="pantry-items" id="pantryItems"></div>
+      <div class="pantry-msg" id="pantryMsg"></div>
+    </div>
+
     <button class="auth-btn" id="profileSave" style="width:100%;margin-top:6px;">Lagre profil</button>
     <div class="auth-msg" id="profileMsg"></div>
   </div>
@@ -1160,6 +1193,10 @@ btn.addEventListener("click",async()=>{
 window.MM_getSettings=()=>({goal:state.goal,preference:state.pref,dinners:state.dinners,persons:state.persons,freetext:state.freeText});
 window.MM_setProfileContext=(t)=>{ profileContext=t||""; };
 window.MM_getProfileContext=()=>profileContext;
+// Råvarelista (fra Supabase) gjøres tilgjengelig for «Har hjemme»-delen i profilen.
+window.MM_getIngredienser=()=>Object.entries(ING)
+  .map(([id,it])=>({id,navn:it.n,kat:it.kat,pg:it.pg,pk:it.pk}))
+  .sort((a,b)=>a.navn.localeCompare(b.navn,"nb"));
 window.MM_setRecentRecipes=(ids)=>{ recentRecipeIds=new Set(ids||[]); };
 window.MM_addRecentRecipes=(ids)=>{ (ids||[]).forEach(x=>recentRecipeIds.add(x)); };
 window.MM_applySettings=(p)=>{
@@ -1237,6 +1274,7 @@ let currentAbout="";
 const profModal=$("profileModal"), profMsg=$("profileMsg");
 function openProfile(){
   $("profileAbout").value=currentAbout;
+  renderPantryItems();
   profMsg.className="auth-msg"; profMsg.textContent="";
   profModal.hidden=false;
 }
@@ -1273,6 +1311,97 @@ $("openProfile")?.addEventListener("click",openProfile);
 $("profileClose")?.addEventListener("click",closeProfile);
 $("profileSave")?.addEventListener("click",saveProfile);
 profModal?.addEventListener("click",e=>{ if(e.target===profModal) closeProfile(); });
+
+/* ---------- HAR HJEMME (varebeholdning) ---------- */
+let pantry=[];            // [{ingrediens_id, mengde}]
+const pSearch=$("pantrySearch"), pFinner=$("pantryFinner"), pItems=$("pantryItems"), pMsg=$("pantryMsg");
+
+function pantryMelding(tekst,type){
+  if(!pMsg) return;
+  pMsg.className="pantry-msg"+(type?" "+type:""); pMsg.textContent=tekst||"";
+  if(tekst) setTimeout(()=>{ if(pMsg.textContent===tekst){ pMsg.textContent=""; pMsg.className="pantry-msg"; } },2500);
+}
+function ingListe(){ return window.MM_getIngredienser?window.MM_getIngredienser():[]; }
+function ingInfo(id){ return ingListe().find(x=>x.id===id); }
+
+function renderPantryItems(){
+  if(!pItems) return;
+  if(!pantry.length){ pItems.innerHTML='<div class="pantry-tom">Ingen varer lagt inn ennå.</div>'; return; }
+  pItems.innerHTML=pantry.map(p=>{
+    const it=ingInfo(p.ingrediens_id); if(!it) return "";
+    const pakker=it.pg?(p.mengde/it.pg):0;
+    const hint=it.pg?`≈ ${pakker<1?pakker.toFixed(1):Math.round(pakker*10)/10} × ${it.pk}`:"";
+    return `<div class="pantry-row" data-id="${p.ingrediens_id}">
+      <span class="navn">${it.navn}<small>${hint}</small></span>
+      <input class="mengde" type="number" min="0" step="10" value="${p.mengde}">
+      <span class="enhet">g</span>
+      <button class="fjern" aria-label="Fjern">×</button>
+    </div>`;
+  }).join("");
+  pItems.querySelectorAll(".pantry-row").forEach(row=>{
+    const id=row.dataset.id;
+    row.querySelector(".mengde").addEventListener("change",e=>{
+      const v=Math.max(0,Number(e.target.value)||0);
+      if(v===0) fjernPantry(id); else settPantry(id,v);
+    });
+    row.querySelector(".fjern").addEventListener("click",()=>fjernPantry(id));
+  });
+}
+function renderPantryFinner(){
+  if(!pFinner) return;
+  const q=(pSearch.value||"").toLowerCase().trim();
+  if(!q){ pFinner.hidden=true; pFinner.innerHTML=""; return; }
+  const alt=ingListe().filter(x=>x.navn.toLowerCase().includes(q)&&!pantry.some(p=>p.ingrediens_id===x.id)).slice(0,8);
+  pFinner.hidden=false;
+  pFinner.innerHTML=alt.length
+    ? alt.map(x=>`<button type="button" class="pitem" data-id="${x.id}">${x.navn}<span class="pk">${x.pk}</span></button>`).join("")
+    : '<div style="padding:9px 11px;color:var(--muted);font-size:12.5px">Ingen treff</div>';
+  pFinner.querySelectorAll(".pitem").forEach(b=>b.addEventListener("click",()=>{
+    const it=ingInfo(b.dataset.id);
+    settPantry(b.dataset.id, it&&it.pg?it.pg:100);   // starter på én pakke
+    pSearch.value=""; renderPantryFinner();
+  }));
+}
+async function settPantry(id,mengde){
+  const i=pantry.findIndex(p=>p.ingrediens_id===id);
+  if(i>=0) pantry[i].mengde=mengde; else pantry.push({ingrediens_id:id,mengde});
+  renderPantryItems();
+  if(!supabase) return;
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(!user){ pantryMelding("Logg inn for å lagre varebeholdningen.","err"); return; }
+  try{
+    const { error }=await supabase.from("har_hjemme")
+      .upsert({bruker_id:user.id,ingrediens_id:id,mengde,oppdatert:new Date().toISOString()},
+              {onConflict:"bruker_id,ingrediens_id"});
+    if(error) throw error;
+    pantryMelding("✓ Lagret","ok");
+  }catch(e){ console.warn("Kunne ikke lagre vare:",e); pantryMelding("Kunne ikke lagre: "+(e.message||e),"err"); }
+}
+async function fjernPantry(id){
+  pantry=pantry.filter(p=>p.ingrediens_id!==id);
+  renderPantryItems(); renderPantryFinner();
+  if(!supabase) return;
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(!user) return;
+  try{
+    const { error }=await supabase.from("har_hjemme").delete()
+      .eq("bruker_id",user.id).eq("ingrediens_id",id);
+    if(error) throw error;
+    pantryMelding("✓ Fjernet","ok");
+  }catch(e){ console.warn("Kunne ikke fjerne vare:",e); pantryMelding("Kunne ikke fjerne: "+(e.message||e),"err"); }
+}
+async function loadPantry(user){
+  if(!supabase||!user) return;
+  try{
+    const { data,error }=await supabase.from("har_hjemme").select("ingrediens_id,mengde");
+    if(error) throw error;
+    pantry=(data||[]).map(r=>({ingrediens_id:r.ingrediens_id,mengde:Number(r.mengde)}));
+    if(window.MM_setPantry) window.MM_setPantry(pantry);
+    renderPantryItems();
+  }catch(e){ console.warn("Kunne ikke hente varebeholdning:",e); }
+}
+pSearch?.addEventListener("input",renderPantryFinner);
+renderPantryItems();
 
 /* ---------- MENYHISTORIKK ---------- */
 async function loadRecent(user){
@@ -1324,7 +1453,7 @@ $("authSignin").addEventListener("click",async()=>{
 if(supabase){
   supabase.auth.onAuthStateChange((event,session)=>{
     renderAuth(session?.user||null);
-    if((event==="SIGNED_IN"||event==="INITIAL_SESSION") && session?.user){ loadProfile(session.user); loadRecent(session.user); }
+    if((event==="SIGNED_IN"||event==="INITIAL_SESSION") && session?.user){ loadProfile(session.user); loadRecent(session.user); loadPantry(session.user); }
   });
   const { data:{ session } }=await supabase.auth.getSession();
   renderAuth(session?.user||null);
