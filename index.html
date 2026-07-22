@@ -277,6 +277,11 @@
   .r-spart{margin-top:9px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--spruce-2);text-align:center;}
   .r-spart b{color:var(--spruce);}
   .r-line .r-name em{font-style:normal;font-size:10.5px;color:var(--spruce-2);}
+  .handlet-boks{max-width:440px;margin-top:2px;}
+  .handlet-btn{width:100%;cursor:pointer;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--spruce);font:inherit;font-weight:600;font-size:14px;padding:12px;transition:border-color .15s,background .15s;}
+  .handlet-btn:hover:not([disabled]){border-color:var(--spruce-2);background:#f4f8f3;}
+  .handlet-btn[disabled]{opacity:.85;cursor:default;}
+  .handlet-hint{font-size:11.5px;color:var(--muted);margin:7px 0 0;text-align:center;line-height:1.45;}
 </style>
 </head>
 <body>
@@ -833,7 +838,7 @@ async function buildPlan(state){
   const spenn=(Math.max(...ss)-Math.min(...ss))||1;
   const jitter=spenn*0.35;
   // Bruker du «har hjemme», løftes retter som utnytter varene dine.
-  const hjemmeVekt = state.brukHarHjemme ? spenn*0.9 : 0;
+  const hjemmeVekt = state.brukHarHjemme ? spenn*1.5 : 0;
   const scoreOf=r=>scoreRecipe(r,pref,daily)+(Math.random()-0.5)*jitter
     +(hjemmeVekt?pantryDekning(r)*hjemmeVekt:0)
     -(recentRecipeIds.has(r.id)?1e6:0);
@@ -891,12 +896,13 @@ async function buildPlan(state){
 function buildShopping(plan,persons){
   const factor=persons/BASE_SERV,grams={};
   plan.forEach(r=>r.ing.forEach(([id,g])=>{grams[id]=(grams[id]||0)+g*factor;}));
-  const lines=[];let total=0,spart=0;const dekket=[];
+  const lines=[];let total=0,spart=0;const dekket=[],brukt={};
   const bruk=!!state.brukHarHjemme;
   const ids=Object.keys(grams).sort((a,b)=>ING[a].kat.localeCompare(ING[b].kat)||ING[a].n.localeCompare(ING[b].n));
   for(const id of ids){
     const it=ING[id], need=grams[id];
     const har = bruk ? Math.min(harHjemme[id]||0, need) : 0;   // felles lager for hele uka
+    if(har>0) brukt[id]=har;
     const rest = Math.max(0, need-har);
     const utenHjemme = Math.max(1,Math.ceil(need/it.pg))*it.pris;
     if(rest<=0){                                   // du har nok — ingen kjøp
@@ -910,7 +916,7 @@ function buildShopping(plan,persons){
     if(har>0) spart += Math.max(0, utenHjemme-cost);
     lines.push({navn:it.n,packs,pk:it.pk,cost,fraHjemme:(har>0&&packs<packsUten)?har:0});
   }
-  return {lines,total,dekket,spart};
+  return {lines,total,dekket,spart,brukt};
 }
 
 /* ---------- TILSTAND ---------- */
@@ -1054,6 +1060,23 @@ function render(){
     ${shop.spart>0?`<div class="r-spart">Du sparer <b>${fmt(shop.spart)} kr</b> på varer du har fra før</div>`:""}
     <div class="r-foot">Tilsvarer <b>${fmt(perPortion)} kr</b> per porsjon · ${persons*N} porsjoner totalt</div>`;
   el.appendChild(rec);
+
+  // Knapp for å trekke brukte varer fra beholdningen
+  if(state.brukHarHjemme && Object.keys(shop.brukt||{}).length){
+    const boks=document.createElement("div"); boks.className="handlet-boks anim";
+    boks.innerHTML=`<button class="handlet-btn" id="handletBtn">✓ Jeg handler denne</button>
+      <p class="handlet-hint">Trekker varene du brukte fra «Har hjemme» i profilen din.</p>`;
+    el.appendChild(boks);
+    const b=boks.querySelector("#handletBtn");
+    b.addEventListener("click",async()=>{
+      b.disabled=true; b.textContent="Oppdaterer …";
+      const ok = window.MM_forbrukHarHjemme ? await window.MM_forbrukHarHjemme(shop.brukt) : false;
+      if(ok){ b.textContent="✓ Beholdningen er oppdatert";
+        boks.querySelector(".handlet-hint").textContent="Varene er trukket fra profilen din."; }
+      else { b.disabled=false; b.textContent="✓ Jeg handler denne";
+        boks.querySelector(".handlet-hint").textContent="Kunne ikke oppdatere — er du logget inn?"; }
+    });
+  }
 
   el.querySelectorAll(".swap").forEach(b=>b.addEventListener("click",()=>swapDinner(parseInt(b.dataset.idx,10))));
   el.querySelectorAll(".recipe-btn").forEach(b=>b.addEventListener("click",()=>toggleRecipe(parseInt(b.dataset.idx,10),b)));
@@ -1502,6 +1525,37 @@ async function loadPantry(user){
 }
 pSearch?.addEventListener("input",renderPantryFinner);
 renderPantryItems();
+
+// Trekker forbrukte mengder fra beholdningen (kalles fra «Jeg handler denne»).
+window.MM_forbrukHarHjemme=async function(brukt){
+  if(!supabase||!brukt) return false;
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(!user) return false;
+  try{
+    const oppdater=[], slett=[];
+    for(const [id,mengde] of Object.entries(brukt)){
+      const rad=pantry.find(p=>p.ingrediens_id===id);
+      if(!rad) continue;
+      const rest=Math.max(0, Math.round(rad.mengde-mengde));
+      if(rest<=0) slett.push(id);
+      else oppdater.push({bruker_id:user.id,ingrediens_id:id,mengde:rest,oppdatert:new Date().toISOString()});
+    }
+    if(oppdater.length){
+      const { error }=await supabase.from("har_hjemme").upsert(oppdater,{onConflict:"bruker_id,ingrediens_id"});
+      if(error) throw error;
+    }
+    if(slett.length){
+      const { error }=await supabase.from("har_hjemme").delete()
+        .eq("bruker_id",user.id).in("ingrediens_id",slett);
+      if(error) throw error;
+    }
+    pantry=pantry.filter(p=>!slett.includes(p.ingrediens_id));
+    oppdater.forEach(o=>{ const r=pantry.find(p=>p.ingrediens_id===o.ingrediens_id); if(r) r.mengde=o.mengde; });
+    if(window.MM_setPantry) window.MM_setPantry(pantry);
+    renderPantryItems();
+    return true;
+  }catch(e){ console.warn("Kunne ikke oppdatere beholdning:",e); return false; }
+};
 
 /* ---------- MENYHISTORIKK ---------- */
 async function loadRecent(user){
