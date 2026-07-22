@@ -394,7 +394,7 @@
 
 <script>
 /* ---------- DATA (eksempeldata / dummy) ---------- */
-const ING = {
+let ING = {
   kyllingfilet:{n:"Kyllingfilet",kat:"Kjøtt",kcal:106,p:22,k:0,f:1.8,pg:600,pris:75,pk:"600 g"},
   kjottdeig:{n:"Kjøttdeig 14%",kat:"Kjøtt",kcal:211,p:18.6,k:0,f:14,pg:400,pris:45,pk:"400 g"},
   svinekotelett:{n:"Svinekotelett",kat:"Kjøtt",kcal:172,p:21,k:0,f:9,pg:600,pris:70,pk:"600 g"},
@@ -427,7 +427,7 @@ const ING = {
   tofu:{n:"Tofu Naturell",kat:"Plantebasert",kcal:161,p:17,k:1.8,f:9.3,pg:200,pris:33.8,pk:"200 g"},
   edamame:{n:"Edamame saltet",kat:"Plantebasert",kcal:141,p:12,k:14,f:5.4,pg:400,pris:36.9,pk:"400 g"},
 };
-const RECIPES = [
+let RECIPES = [
   {id:"kylling_ris",navn:"Kylling og ris med brokkoli",tag:"kylling",veg:false,ing:[["kyllingfilet",600],["ris",300],["brokkoli",350],["lok",100],["olivenolje",20],["hvitlok",15]]},
   {id:"bolognese",navn:"Kjøttdeig og pasta (bolognese)",tag:"storfe",veg:false,ing:[["kjottdeig",400],["pasta",360],["knusteTomater",400],["lok",150],["gulrot",120],["olivenolje",15],["hvitlok",15]]},
   {id:"taco",navn:"Taco",tag:"storfe",veg:false,ing:[["kjottdeig",400],["tortilla",320],["paprika",200],["lok",100],["romme",150],["revetOst",100],["tacokrydder",40],["salat",100]]},
@@ -550,7 +550,7 @@ const RETT_META={
 RECIPES.forEach(r=>{ const m=RETT_META[r.id]; if(m){ r.niva=m.niva; r.kjokken=m.kjokken; r.tid=m.tid; r.beskrivelse=m.desc; } });
 
 // Allergener: hvilke råvarer inneholder hva. Grunnmur for allergifiltre — utvides når nye råvarer legges til.
-const ALLERGENER={
+let ALLERGENER={
   gluten:new Set(["pasta","tortilla"]),
   melk:new Set(["melk","romme","revetOst","smor"]),
   egg:new Set(["egg"]),
@@ -568,7 +568,7 @@ RECIPES.forEach(r=>{ r.allergener=new Set(); for(const a in ALLERGENER){ if(r.in
 // Rolle for allergen-bærende råvarer:
 //  "tilpassbar" = kan byttes til fri-for-variant eller sløyfes -> BEHOLD retten, gi varsel.
 //  "kritisk"    = retten faller uten den -> FILTRER retten bort, finn en annen.
-const ALLERGEN_ROLLE={
+let ALLERGEN_ROLLE={
   pasta:"tilpassbar", tortilla:"tilpassbar",                 // gluten: finnes glutenfrie varianter
   melk:"tilpassbar", romme:"tilpassbar", revetOst:"tilpassbar", smor:"tilpassbar", // melk: finnes laktose-/melkefrie
   egg:"kritisk",                                             // egg-baserte retter
@@ -597,6 +597,56 @@ function recipeAllergyInfo(r,avoid){
   return {safe:!kritisk, warn};
 }
 const STATS={};RECIPES.forEach(r=>STATS[r.id]=recipeStats(r));
+
+/* ---------- DATAKILDE: Supabase eller innebygd reserve ---------- */
+// Regner ut alt som utledes av rådataene (metadata, allergen-sett, næring/pris per rett).
+function mmBeregnAvledet(fraSupabase){
+  if(!fraSupabase){
+    RECIPES.forEach(r=>{ const m=RETT_META[r.id]; if(m){ r.niva=m.niva; r.kjokken=m.kjokken; r.tid=m.tid; r.beskrivelse=m.desc; } });
+    RECIPES.forEach(r=>{ r.vegan = r.ing.every(([id])=> !ANIMALSK.has(id)); });
+  }
+  RECIPES.forEach(r=>{ r.allergener=new Set(); for(const a in ALLERGENER){ if(r.ing.some(([id])=>ALLERGENER[a].has(id))) r.allergener.add(a); } });
+  Object.keys(STATS).forEach(k=>delete STATS[k]);
+  RECIPES.forEach(r=>STATS[r.id]=recipeStats(r));
+}
+
+// Bytter ut innebygde data med rader hentet fra Supabase.
+window.mmApplyData=function(ingRader,rettRader,koblinger){
+  const nyING={};
+  ingRader.forEach(r=>{
+    nyING[r.id]={n:r.navn,kat:r.kategori,kcal:Number(r.kcal),p:Number(r.protein),k:Number(r.karbo),
+                 f:Number(r.fett),pg:Number(r.pakke_gram),pris:Number(r.pris),pk:r.pakke_tekst};
+  });
+  const nyAll={gluten:new Set(),melk:new Set(),egg:new Set(),fisk:new Set(),soya:new Set(),
+               "nøtter":new Set(),skalldyr:new Set(),sesam:new Set(),selleri:new Set()};
+  const nyRolle={};
+  ingRader.forEach(r=>{
+    (r.allergener||[]).forEach(a=>{ if(!nyAll[a]) nyAll[a]=new Set(); nyAll[a].add(r.id); });
+    if(r.allergen_rolle) nyRolle[r.id]=r.allergen_rolle;
+  });
+  const perRett={};
+  koblinger.forEach(k=>{ (perRett[k.rett_id]=perRett[k.rett_id]||[]).push([k.ingrediens_id,Number(k.gram)]); });
+  const nyRETTER=rettRader.map(r=>({
+    id:r.id,navn:r.navn,tag:r.tag,veg:!!r.veg,vegan:!!r.vegan,
+    niva:r.niva,kjokken:r.kjokken,tid:r.tid,beskrivelse:r.beskrivelse,
+    fremgangsmate:r.fremgangsmate||null, ing:perRett[r.id]||[]
+  })).filter(r=>r.ing.length>0 && r.ing.every(([id])=>nyING[id]));
+
+  if(!Object.keys(nyING).length || !nyRETTER.length) return false; // ufullstendig -> behold reserve
+  ING=nyING; RECIPES=nyRETTER; ALLERGENER=nyAll; ALLERGEN_ROLLE=nyRolle;
+  mmBeregnAvledet(true);
+  return true;
+};
+
+// Starter appen (kalles når data er klare — enten fra Supabase eller reserve).
+let mmStartet=false;
+window.mmStartApp=async function(kilde){
+  if(mmStartet) return; mmStartet=true;
+  window.MM_DATAKILDE=kilde||"reserve";
+  try{ state.current=await buildPlan(state); render(); }
+  catch(e){ console.error("Kunne ikke lage meny:",e);
+    document.getElementById("results").innerHTML='<div class="loading">Noe gikk galt ved oppstart. Last siden på nytt.</div>'; }
+};
 function perDinnerTarget(daily){return {kcal:daily.kcal*DINNER_SHARE,p:daily.p*DINNER_SHARE,k:daily.k*DINNER_SHARE,f:daily.f*DINNER_SHARE};}
 function scoreRecipe(r,pref,daily){
   const st=STATS[r.id],t=perDinnerTarget(daily);
@@ -1122,8 +1172,11 @@ window.MM_applySettings=(p)=>{
   if(typeof p.freetext==='string'){ state.freeText=p.freetext; document.getElementById('freeText').value=p.freetext; }
 };
 
-/* førstegangs-render (uten Claude) */
-(async()=>{ state.current=await buildPlan(state); render(); })();
+/* førstegangs-oppstart: vis «laster», vent på Supabase-data.
+   Kommer de ikke innen 8 sekunder, starter vi på innebygde reservedata. */
+document.getElementById("results").innerHTML=
+  '<div class="loading"><span class="spinner"></span> Henter retter og råvarer…</div>';
+setTimeout(()=>{ if(!mmStartet){ console.warn("Supabase-data uteble — bruker innebygde reservedata."); window.mmStartApp("reserve"); } },8000);
 </script>
 <script type="module">
 /* ---------- INNLOGGING (Supabase) ---------- */
@@ -1135,6 +1188,30 @@ const SUPABASE_KEY="sb_publishable_e-Y0JsjSgEZcjIdBI5R0GQ__jJEmKSk";
 let supabase=null;
 try{ supabase=createClient(SUPABASE_URL,SUPABASE_KEY); }
 catch(e){ console.warn("Supabase utilgjengelig:",e); }
+
+/* ---------- HENT RETTER OG RÅVARER FRA SUPABASE ---------- */
+(async()=>{
+  if(!supabase){ window.mmStartApp("reserve"); return; }
+  try{
+    const [ing,retter,koblinger]=await Promise.all([
+      supabase.from("ingredienser").select("*"),
+      supabase.from("retter").select("*"),
+      supabase.from("rett_ingredienser").select("rett_id,ingrediens_id,gram").limit(5000)
+    ]);
+    if(ing.error||retter.error||koblinger.error) throw (ing.error||retter.error||koblinger.error);
+    const ok=window.mmApplyData(ing.data||[],retter.data||[],koblinger.data||[]);
+    if(ok){
+      console.log(`Data fra Supabase: ${(ing.data||[]).length} råvarer, ${(retter.data||[]).length} retter, ${(koblinger.data||[]).length} koblinger.`);
+      window.mmStartApp("supabase");
+    } else {
+      console.warn("Supabase-data var ufullstendige — bruker innebygde reservedata.");
+      window.mmStartApp("reserve");
+    }
+  }catch(e){
+    console.warn("Kunne ikke hente fra Supabase, bruker reservedata:",e);
+    window.mmStartApp("reserve");
+  }
+})();
 
 const $=id=>document.getElementById(id);
 const authArea=$("authArea"), modal=$("authModal"), msg=$("authMsg");
