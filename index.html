@@ -267,6 +267,16 @@
   .pantry-msg{font-size:12.5px;margin-top:8px;min-height:16px;}
   .pantry-msg.ok{color:var(--spruce-2);}
   .pantry-msg.err{color:var(--kroner);}
+  .hjemme-rad[hidden]{display:none;}
+  .hjemme-valg{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;font-weight:600;margin-bottom:0;}
+  .hjemme-valg input{width:17px;height:17px;accent-color:var(--spruce);cursor:pointer;flex:0 0 auto;}
+  .hjemme-hint{font-size:11.5px;color:var(--muted);margin:6px 0 0;line-height:1.45;}
+  .r-hjemme{margin-top:11px;padding-top:10px;border-top:1px dashed var(--line);}
+  .r-hjemme-lab{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+  .r-hjemme-linje{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--spruce-2);padding:2px 0;}
+  .r-spart{margin-top:9px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--spruce-2);text-align:center;}
+  .r-spart b{color:var(--spruce);}
+  .r-line .r-name em{font-style:normal;font-size:10.5px;color:var(--spruce-2);}
 </style>
 </head>
 <body>
@@ -364,6 +374,14 @@
             <div class="kjokken-list" id="kjokkenList"></div>
           </div>
         </div>
+      </div>
+
+      <div class="field hjemme-rad" id="harHjemmeRad" hidden>
+        <label class="hjemme-valg">
+          <input type="checkbox" id="brukHarHjemme">
+          <span>Bruk mest mulig av det jeg har hjemme</span>
+        </label>
+        <p class="hjemme-hint">Menyen prioriterer varene i profilen din, og handlelista trekker fra det du allerede har.</p>
       </div>
 
       <div class="field">
@@ -812,8 +830,13 @@ async function buildPlan(state){
     return {plan:[],goal:interp.goal,pref,vegOnly,veganOnly,avoid,warn:"tom",daily,note:interp.note,constraints:cons,source:interp.source};
   }
   const ss=pool.map(r=>scoreRecipe(r,pref,daily));
-  const jitter=(Math.max(...ss)-Math.min(...ss))*0.35||1;
-  const scoreOf=r=>scoreRecipe(r,pref,daily)+(Math.random()-0.5)*jitter-(recentRecipeIds.has(r.id)?1e6:0);
+  const spenn=(Math.max(...ss)-Math.min(...ss))||1;
+  const jitter=spenn*0.35;
+  // Bruker du «har hjemme», løftes retter som utnytter varene dine.
+  const hjemmeVekt = state.brukHarHjemme ? spenn*0.9 : 0;
+  const scoreOf=r=>scoreRecipe(r,pref,daily)+(Math.random()-0.5)*jitter
+    +(hjemmeVekt?pantryDekning(r)*hjemmeVekt:0)
+    -(recentRecipeIds.has(r.id)?1e6:0);
 
   const slots=new Array(N).fill(null);
   const used=new Set();
@@ -868,16 +891,48 @@ async function buildPlan(state){
 function buildShopping(plan,persons){
   const factor=persons/BASE_SERV,grams={};
   plan.forEach(r=>r.ing.forEach(([id,g])=>{grams[id]=(grams[id]||0)+g*factor;}));
-  const lines=[];let total=0;
+  const lines=[];let total=0,spart=0;const dekket=[];
+  const bruk=!!state.brukHarHjemme;
   const ids=Object.keys(grams).sort((a,b)=>ING[a].kat.localeCompare(ING[b].kat)||ING[a].n.localeCompare(ING[b].n));
-  for(const id of ids){const it=ING[id],need=grams[id],packs=Math.max(1,Math.ceil(need/it.pg)),cost=packs*it.pris;total+=cost;lines.push({navn:it.n,packs,pk:it.pk,cost});}
-  return {lines,total};
+  for(const id of ids){
+    const it=ING[id], need=grams[id];
+    const har = bruk ? Math.min(harHjemme[id]||0, need) : 0;   // felles lager for hele uka
+    const rest = Math.max(0, need-har);
+    const utenHjemme = Math.max(1,Math.ceil(need/it.pg))*it.pris;
+    if(rest<=0){                                   // du har nok — ingen kjøp
+      dekket.push({navn:it.n, brukt:har});
+      spart += utenHjemme;
+      continue;
+    }
+    const packs=Math.max(1,Math.ceil(rest/it.pg)), cost=packs*it.pris;
+    const packsUten=Math.max(1,Math.ceil(need/it.pg));
+    total+=cost;
+    if(har>0) spart += Math.max(0, utenHjemme-cost);
+    lines.push({navn:it.n,packs,pk:it.pk,cost,fraHjemme:(har>0&&packs<packsUten)?har:0});
+  }
+  return {lines,total,dekket,spart};
 }
 
 /* ---------- TILSTAND ---------- */
-const state={goal:"holde",dinners:5,persons:2,pref:"balansert",freeText:"",fNiva:4,fTidLvl:5,fTid:90,fKjokken:[],current:null};
+const state={goal:"holde",dinners:5,persons:2,pref:"balansert",freeText:"",fNiva:4,fTidLvl:5,fTid:90,fKjokken:[],brukHarHjemme:false,current:null};
 let profileContext="";  // fast "om meg/familien"-tekst fra profilen, tas med i hver planlegging
 let recentRecipeIds=new Set();  // retter fra nylig lagrede menyer — straffes så de ikke gjentas
+let harHjemme={};       // {ingrediens_id: gram} — brukerens varebeholdning fra profilen
+
+// Andel (0–1) av rettens råvarekostnad som allerede dekkes av det du har hjemme.
+// Grovt anslag brukt til å prioritere retter; handlelista regner eksakt.
+function pantryDekning(r){
+  if(!Object.keys(harHjemme).length) return 0;
+  let sum=0, dekket=0;
+  for(const [id,g] of r.ing){
+    const it=ING[id]; if(!it) continue;
+    const kr=g*(it.pris/it.pg);
+    sum+=kr;
+    const har=harHjemme[id]||0;
+    if(har>0) dekket += kr*Math.min(1, har/g);
+  }
+  return sum>0 ? dekket/sum : 0;
+}
 
 /* ---------- RENDER ---------- */
 function fmt(n){return Math.round(n);}
@@ -992,9 +1047,11 @@ function render(){
   const sh2=document.createElement("div");sh2.className="section-h anim";
   sh2.innerHTML=`<h2>Handleliste</h2><span class="meta">${shop.lines.length} varer</span>`;el.appendChild(sh2);
   const rec=document.createElement("div");rec.className="receipt anim";
-  const rows=shop.lines.map(l=>`<div class="r-line"><span class="r-name">${l.navn}${l.packs>1?` <small>${l.packs} × ${l.pk}</small>`:` <small>${l.pk}</small>`}</span><span class="r-lead"></span><span class="r-price">${fmt(l.cost)} kr</span></div>`).join("");
+  const rows=shop.lines.map(l=>`<div class="r-line"><span class="r-name">${l.navn}${l.fraHjemme?" <em>(delvis hjemme)</em>":""}${l.packs>1?` <small>${l.packs} × ${l.pk}</small>`:` <small>${l.pk}</small>`}</span><span class="r-lead"></span><span class="r-price">${fmt(l.cost)} kr</span></div>`).join("");
   rec.innerHTML=`<div class="r-head"><div class="store">MakroMeny</div><div class="sub">Handleliste · veiledende priser</div></div>
     ${rows}<div class="r-total"><span class="t-lab">TOTALT</span><span class="t-val num">${fmt(shop.total)} kr</span></div>
+    ${(shop.dekket&&shop.dekket.length)?`<div class="r-hjemme"><div class="r-hjemme-lab">Har du hjemme — ikke handle</div>${shop.dekket.map(d=>`<div class="r-hjemme-linje">✓ ${d.navn}</div>`).join("")}</div>`:""}
+    ${shop.spart>0?`<div class="r-spart">Du sparer <b>${fmt(shop.spart)} kr</b> på varer du har fra før</div>`:""}
     <div class="r-foot">Tilsvarer <b>${fmt(perPortion)} kr</b> per porsjon · ${persons*N} porsjoner totalt</div>`;
   el.appendChild(rec);
 
@@ -1176,6 +1233,7 @@ document.querySelectorAll('[data-step] button').forEach(b=>b.addEventListener("c
   else{state.persons=Math.min(6,Math.max(1,state.persons+d));document.getElementById("personsVal").textContent=state.persons;}
 }));
 document.getElementById("freeText").addEventListener("input",e=>state.freeText=e.target.value);
+document.getElementById("brukHarHjemme")?.addEventListener("change",e=>{ state.brukHarHjemme=e.target.checked; });
 
 const btn=document.getElementById("generate"),ctaLabel=document.getElementById("ctaLabel");
 btn.addEventListener("click",async()=>{
@@ -1197,6 +1255,13 @@ window.MM_getProfileContext=()=>profileContext;
 window.MM_getIngredienser=()=>Object.entries(ING)
   .map(([id,it])=>({id,navn:it.n,kat:it.kat,pg:it.pg,pk:it.pk}))
   .sort((a,b)=>a.navn.localeCompare(b.navn,"nb"));
+// Varebeholdningen fra profilen gjøres tilgjengelig for motoren og handlelista.
+window.MM_setPantry=(arr)=>{
+  harHjemme={};
+  (arr||[]).forEach(p=>{ if(p.mengde>0) harHjemme[p.ingrediens_id]=Number(p.mengde); });
+  const rad=document.getElementById("harHjemmeRad");
+  if(rad) rad.hidden=!Object.keys(harHjemme).length;
+};
 window.MM_setRecentRecipes=(ids)=>{ recentRecipeIds=new Set(ids||[]); };
 window.MM_addRecentRecipes=(ids)=>{ (ids||[]).forEach(x=>recentRecipeIds.add(x)); };
 window.MM_applySettings=(p)=>{
