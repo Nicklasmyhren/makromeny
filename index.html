@@ -452,7 +452,7 @@ let ING = {
   tacokrydder:{n:"Tacokrydder",kat:"Tørrvarer",kcal:300,p:10,k:50,f:5,pg:40,pris:16,pk:"40 g"},
   rodeLinser:{n:"Røde linser",kat:"Tørrvarer",kcal:338,p:24,k:52,f:1.5,pg:500,pris:32,pk:"500 g"},
   kikerter:{n:"Kikerter",kat:"Hermetikk",kcal:119,p:7,k:16,f:2,pg:380,pris:16,pk:"380 g"},
-  kokosmelk:{n:"Kokosmelk",kat:"Hermetikk",kcal:180,p:1.6,k:3,f:18,pg:400,pris:22,pk:"400 g"},
+  kokosmelk:{n:"Kokosmelk",kat:"Hermetikk",kcal:180,p:1.6,k:3,f:18,pg:400,pris:22,pk:"400 ml"},
   salat:{n:"Salatmix",kat:"Frukt & grønt",kcal:15,p:1.4,k:2,f:0.2,pg:175,pris:25,pk:"1 pose"},
   cherrytomat:{n:"Cherrytomater",kat:"Frukt & grønt",kcal:23,p:1.4,k:3.2,f:0.2,pg:250,pris:40.5,pk:"250 g"},
   melk:{n:"Lettmelk 1%",kat:"Meieri & egg",kcal:40,p:3.4,k:4.4,f:1,pg:1000,pris:20.5,pk:"1 l"},
@@ -1324,15 +1324,27 @@ function pantryMelding(tekst,type){
 function ingListe(){ return window.MM_getIngredienser?window.MM_getIngredienser():[]; }
 function ingInfo(id){ return ingListe().find(x=>x.id===id); }
 
-// Varer som selges i stykker/poser (f.eks. «12 stk», «1 pose») telles i stk, ikke gram.
-// Vi lagrer alltid gram i basen, men lar deg skrive antall.
+// Finner naturlig enhet ut fra pakketeksten:
+//   «12 stk» / «1 pose» -> telles i stk/pose
+//   «500 ml» / «1 l» / «4 dl» -> telles i ml
+//   ellers -> gram
+// Vi lagrer alltid gram i basen, men lar deg skrive i den enheten som er naturlig.
 function stkInfo(it){
   if(!it||!it.pk||!it.pg) return null;
-  const m=String(it.pk).match(/^\s*(\d+(?:[.,]\d+)?)\s*(stk|pose|poser)\b/i);
-  if(!m) return null;
-  const antall=parseFloat(m[1].replace(",","."));
-  if(!antall||antall<=0) return null;
-  return { enhet:/pose/i.test(m[2])?"pose":"stk", perEnhet: it.pg/antall };
+  const t=String(it.pk).trim();
+  const stk=t.match(/^\s*(\d+(?:[.,]\d+)?)\s*(stk|pose|poser)\b/i);
+  if(stk){
+    const antall=parseFloat(stk[1].replace(",","."));
+    if(antall>0) return { enhet:/pose/i.test(stk[2])?"pose":"stk", perEnhet: it.pg/antall };
+  }
+  const vsk=t.match(/^\s*(\d+(?:[.,]\d+)?)\s*(ml|dl|l|liter)\b/i);
+  if(vsk){
+    const tall=parseFloat(vsk[1].replace(",","."));
+    const enh=vsk[2].toLowerCase();
+    const ml = enh==="ml" ? tall : (enh==="dl" ? tall*100 : tall*1000);
+    if(ml>0) return { enhet:"ml", perEnhet: it.pg/ml };
+  }
+  return null;
 }
 
 function renderPantryItems(){
@@ -1342,10 +1354,12 @@ function renderPantryItems(){
     const it=ingInfo(p.ingrediens_id); if(!it) return "";
     const st=stkInfo(it);
     if(st){
-      const antall=Math.round((p.mengde/st.perEnhet)*10)/10;
+      const raa=p.mengde/st.perEnhet;
+      const antall = st.enhet==="ml" ? Math.round(raa) : Math.round(raa*10)/10;
+      const steg = st.enhet==="ml" ? 50 : 1;
       return `<div class="pantry-row" data-id="${p.ingrediens_id}" data-per="${st.perEnhet}">
-        <span class="navn">${it.navn}<small>≈ ${Math.round(p.mengde)} g</small></span>
-        <input class="mengde" type="number" min="0" step="1" value="${antall}">
+        <span class="navn">${it.navn}<small>${st.enhet==="ml"?"":"≈ "+Math.round(p.mengde)+" g"}</small></span>
+        <input class="mengde" type="number" min="0" step="${steg}" value="${antall}">
         <span class="enhet">${st.enhet}</span>
         <button class="fjern" aria-label="Fjern">×</button>
       </div>`;
