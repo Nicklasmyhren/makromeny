@@ -402,16 +402,29 @@
   <div class="auth-box">
     <button class="auth-close" id="authClose" aria-label="Lukk">×</button>
     <h2>Logg inn</h2>
-    <p class="sub">Logg inn eller lag en konto. Snart kan du lagre profil, preferanser og menyene dine.</p>
+    <p class="sub">Logg inn med e-posten du ble invitert med. Da lagres profilen, preferansene og menyene dine.</p>
     <label>E-post</label>
     <input id="authEmail" type="email" placeholder="deg@epost.no" autocomplete="email" />
     <label>Passord</label>
     <input id="authPw" type="password" placeholder="minst 6 tegn" autocomplete="current-password" />
     <div class="auth-row">
-      <button class="auth-btn ghost" id="authSignup">Registrer</button>
+      <button class="auth-btn ghost" id="authSignup" hidden>Registrer</button>
       <button class="auth-btn" id="authSignin">Logg inn</button>
     </div>
     <div class="auth-msg" id="authMsg"></div>
+  </div>
+</div>
+
+<div class="auth-modal" id="setPwModal" hidden>
+  <div class="auth-box">
+    <h2>Velg et passord</h2>
+    <p class="sub">Velkommen! Sett et passord for kontoen din, så er du klar til å bruke MakroMeny. Du bruker dette passordet neste gang du logger inn.</p>
+    <label>Nytt passord</label>
+    <input id="setPw1" type="password" placeholder="minst 6 tegn" autocomplete="new-password" />
+    <label>Gjenta passord</label>
+    <input id="setPw2" type="password" placeholder="skriv passordet på nytt" autocomplete="new-password" />
+    <button class="auth-btn" id="setPwSave" style="width:100%;margin-top:6px;">Lagre passord</button>
+    <div class="auth-msg" id="setPwMsg"></div>
   </div>
 </div>
 
@@ -1299,6 +1312,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL="https://izgcnwyflmctaxfxwzga.supabase.co";
 const SUPABASE_KEY="sb_publishable_e-Y0JsjSgEZcjIdBI5R0GQ__jJEmKSk";
 
+// Fanger invitasjons-/tilbakestillingslenke FØR Supabase-klienten rydder bort adressen.
+const MM_initialHash=(typeof window!=="undefined" && window.location.hash) ? window.location.hash : "";
+const MM_authFlow=(MM_initialHash.match(/type=(invite|recovery)/)||[])[1] || null;
+
 let supabase=null;
 try{ supabase=createClient(SUPABASE_URL,SUPABASE_KEY); }
 catch(e){ console.warn("Supabase utilgjengelig:",e); }
@@ -1592,12 +1609,32 @@ $("authSignin").addEventListener("click",async()=>{
   }catch(e){ showMsg("err",e.message||String(e)); }
 });
 
+// ---- Velg passord (invitasjon / tilbakestilling) ----
+const setPwModal=$("setPwModal");
+function openSetPw(){ if(setPwModal) setPwModal.hidden=false; }
+$("setPwSave")?.addEventListener("click",async()=>{
+  if(!supabase) return;
+  const p1=$("setPw1").value, p2=$("setPw2").value, m=$("setPwMsg");
+  const setM=(t,txt)=>{ m.className="auth-msg "+t; m.textContent=txt; };
+  if(p1.length<6){ setM("err","Passordet må ha minst 6 tegn."); return; }
+  if(p1!==p2){ setM("err","Passordene er ikke like."); return; }
+  try{
+    const { error }=await supabase.auth.updateUser({ password:p1 });
+    if(error) throw error;
+    setM("ok","✓ Passord lagret — du er klar!");
+    if(history.replaceState) history.replaceState(null,"",window.location.pathname+window.location.search);
+    setTimeout(()=>{ setPwModal.hidden=true; },1000);
+  }catch(e){ setM("err",e.message||String(e)); }
+});
+
 // Start: vis riktig tilstand og lytt på endringer
 if(supabase){
   supabase.auth.onAuthStateChange((event,session)=>{
     renderAuth(session?.user||null);
+    if(event==="PASSWORD_RECOVERY"){ openSetPw(); }
     if((event==="SIGNED_IN"||event==="INITIAL_SESSION") && session?.user){ loadProfile(session.user); loadRecent(session.user); loadPantry(session.user); }
   });
+  if(MM_authFlow){ openSetPw(); }
   const { data:{ session } }=await supabase.auth.getSession();
   renderAuth(session?.user||null);
 }else{
