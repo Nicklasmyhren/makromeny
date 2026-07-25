@@ -419,11 +419,13 @@
   <div class="auth-box">
     <h2>Velg et passord</h2>
     <p class="sub">Velkommen! Sett et passord for kontoen din, så er du klar til å bruke MakroMeny. Du bruker dette passordet neste gang du logger inn.</p>
-    <label>Nytt passord</label>
-    <input id="setPw1" type="password" placeholder="minst 6 tegn" autocomplete="new-password" />
-    <label>Gjenta passord</label>
-    <input id="setPw2" type="password" placeholder="skriv passordet på nytt" autocomplete="new-password" />
-    <button class="auth-btn" id="setPwSave" style="width:100%;margin-top:6px;">Lagre passord</button>
+    <div id="setPwFields">
+      <label>Nytt passord</label>
+      <input id="setPw1" type="password" placeholder="minst 6 tegn" autocomplete="new-password" />
+      <label>Gjenta passord</label>
+      <input id="setPw2" type="password" placeholder="skriv passordet på nytt" autocomplete="new-password" />
+      <button class="auth-btn" id="setPwSave" style="width:100%;margin-top:6px;">Lagre passord</button>
+    </div>
     <div class="auth-msg" id="setPwMsg"></div>
   </div>
 </div>
@@ -1611,7 +1613,37 @@ $("authSignin").addEventListener("click",async()=>{
 
 // ---- Velg passord (invitasjon / tilbakestilling) ----
 const setPwModal=$("setPwModal");
-function openSetPw(){ if(setPwModal) setPwModal.hidden=false; }
+let mmSetPwStarted=false;
+
+// Venter til Supabase har fått en økt fra lenken (etableres asynkront etter klikk).
+async function mmWaitForSession(maxMs=6000){
+  const t0=Date.now();
+  while(Date.now()-t0<maxMs){
+    try{ const { data:{ session } }=await supabase.auth.getSession(); if(session) return session; }catch(e){}
+    await new Promise(r=>setTimeout(r,300));
+  }
+  return null;
+}
+
+// Åpner «velg passord» og slipper bare fram feltene når innloggingen faktisk er på plass.
+async function startSetPwFlow(){
+  if(!setPwModal || mmSetPwStarted) return;
+  mmSetPwStarted=true;
+  const fields=$("setPwFields"), m=$("setPwMsg");
+  setPwModal.hidden=false;
+  if(fields) fields.hidden=true;
+  m.className="auth-msg info"; m.textContent="Kobler til invitasjonen …";
+  const session=await mmWaitForSession();
+  if(session){
+    m.className="auth-msg"; m.textContent="";
+    if(fields) fields.hidden=false;
+    $("setPw1")?.focus();
+  }else{
+    m.className="auth-msg err";
+    m.textContent="Denne invitasjonslenken er utløpt eller allerede brukt. Be om en ny invitasjon, og åpne lenken i en vanlig nettleser så snart du får den.";
+  }
+}
+
 $("setPwSave")?.addEventListener("click",async()=>{
   if(!supabase) return;
   const p1=$("setPw1").value, p2=$("setPw2").value, m=$("setPwMsg");
@@ -1624,17 +1656,24 @@ $("setPwSave")?.addEventListener("click",async()=>{
     setM("ok","✓ Passord lagret — du er klar!");
     if(history.replaceState) history.replaceState(null,"",window.location.pathname+window.location.search);
     setTimeout(()=>{ setPwModal.hidden=true; },1000);
-  }catch(e){ setM("err",e.message||String(e)); }
+  }catch(e){
+    const txt=(e && (e.message||String(e)))||"";
+    if(/session|missing|JWT|token/i.test(txt)){
+      setM("err","Innloggingen fra lenken ble borte. Lenken er trolig utløpt eller allerede brukt — be om en ny invitasjon.");
+    }else{
+      setM("err",txt);
+    }
+  }
 });
 
 // Start: vis riktig tilstand og lytt på endringer
 if(supabase){
   supabase.auth.onAuthStateChange((event,session)=>{
     renderAuth(session?.user||null);
-    if(event==="PASSWORD_RECOVERY"){ openSetPw(); }
+    if(event==="PASSWORD_RECOVERY"){ startSetPwFlow(); }
     if((event==="SIGNED_IN"||event==="INITIAL_SESSION") && session?.user){ loadProfile(session.user); loadRecent(session.user); loadPantry(session.user); }
   });
-  if(MM_authFlow){ openSetPw(); }
+  if(MM_authFlow){ startSetPwFlow(); }
   const { data:{ session } }=await supabase.auth.getSession();
   renderAuth(session?.user||null);
 }else{
