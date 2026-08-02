@@ -1235,8 +1235,12 @@ function render(){
   const umb=document.getElementById("useMenuBtn");
   if(umb) umb.addEventListener("click",async()=>{
     const ids=plan.map(r=>r.id);
+    // Samle oppskrifter brukeren har sett i denne økta, per rett-id
+    const persons=state.persons;
+    const recipesByDish={};
+    plan.forEach(r=>{ const c=recipeCache[r.id+"_"+persons]; if(c) recipesByDish[r.id]={persons,timeMin:c.timeMin,steps:c.steps}; });
     umb.disabled=true; umb.textContent="Lagrer …";
-    const res = window.MM_saveCurrentMenu ? await window.MM_saveCurrentMenu(ids) : {ok:false,reason:"unavailable"};
+    const res = window.MM_saveCurrentMenu ? await window.MM_saveCurrentMenu(ids,recipesByDish) : {ok:false,reason:"unavailable"};
     if(res&&res.ok){
       // Samme handling trekker også fra beholdningen, når den er i bruk.
       let trakkFra=false;
@@ -1728,12 +1732,14 @@ async function loadRecent(user){
     window.MM_setRecentRecipes(ids);
   }catch(e){ console.warn("Kunne ikke hente historikk:",e); }
 }
-window.MM_saveCurrentMenu=async(ids)=>{
+window.MM_saveCurrentMenu=async(ids,recipesByDish)=>{
   if(!supabase) return {ok:false,reason:"unavailable"};
   const { data:{ user } }=await supabase.auth.getUser();
   if(!user){ openModal(); return {ok:false,reason:"login"}; }
   try{
-    const { error }=await supabase.from("menus").insert({ user_id:user.id, recipe_ids:ids });
+    const row={ user_id:user.id, recipe_ids:ids };
+    if(recipesByDish && Object.keys(recipesByDish).length) row.recipes=recipesByDish;
+    const { error }=await supabase.from("menus").insert(row);
     if(error) throw error;
     if(window.MM_addRecentRecipes) window.MM_addRecentRecipes(ids);
     return {ok:true};
