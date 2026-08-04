@@ -42,10 +42,7 @@ Svar med KUN JSON-objektet. Ingen innledning, ingen forklaring, ingen tekst ette
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
       max_tokens: 1200,
-      messages: [
-        { role: "user", content: prompt },
-        { role: "assistant", content: "{" }
-      ]
+      messages: [{ role: "user", content: prompt }]
     })
   });
 
@@ -55,9 +52,7 @@ Svar med KUN JSON-objektet. Ingen innledning, ingen forklaring, ingen tekst ette
   }
 
   const data = await res.json();
-  const cont = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
-  // Vi forhåndsutfylte svaret med "{", så legg den på igjen for gyldig JSON.
-  const raw = cont.startsWith("{") ? cont : "{" + cont;
+  const raw = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
   return new Response(JSON.stringify({ raw }), {
     headers: { "Content-Type": "application/json" }
   });
