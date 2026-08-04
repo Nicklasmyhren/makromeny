@@ -28,7 +28,9 @@ KRAV — følg alle:
 - MENGDE-NØYTRAL: bruk ALDRI absolutte mengder (ikke "400 g", "2 ss", "1 boks", "3 stk"). Bruk relative formuleringer i stedet: "halvparten av løken", "alt kjøttet", "til gyllen", "til det bobler", "til risen er mør". Mengdene står i appens ingrediensliste, som skalerer med antall porsjoner — fremgangsmåten skal fungere uansett porsjonstall.
 - Ovnstemperaturer (f.eks. 200 grader) og tider i minutter er LOV — de er ikke mengder.
 - Bruk kun ingrediensene i lista, pluss salt, pepper og vann.
-- Ikke nevn antall porsjoner.`;
+- Ikke nevn antall porsjoner.
+
+Svar med KUN JSON-objektet. Ingen innledning, ingen forklaring, ingen tekst etter. Første tegn i svaret ditt skal være { og siste tegn skal være }.`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -40,7 +42,10 @@ KRAV — følg alle:
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
       max_tokens: 1200,
-      messages: [{ role: "user", content: prompt }]
+      messages: [
+        { role: "user", content: prompt },
+        { role: "assistant", content: "{" }
+      ]
     })
   });
 
@@ -50,7 +55,9 @@ KRAV — følg alle:
   }
 
   const data = await res.json();
-  const raw = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
+  const cont = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("").trim();
+  // Vi forhåndsutfylte svaret med "{", så legg den på igjen for gyldig JSON.
+  const raw = cont.startsWith("{") ? cont : "{" + cont;
   return new Response(JSON.stringify({ raw }), {
     headers: { "Content-Type": "application/json" }
   });
