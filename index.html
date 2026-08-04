@@ -1745,6 +1745,15 @@ window.MM_forbrukHarHjemme=async function(brukt){
 /* ---------- ADMIN: fremgangsmåter ---------- */
 const MENGDE_RE=/\d+([.,]\d+)?\s*(g|gram|kg|dl|ml|l|liter|ss|ts|stk|bokser?|poser?|pakker?)\b/i;
 
+// Tåler at Claude pakker JSON i kodeblokk eller legger tekst rundt: plukker ut {...}.
+function mmParseRecipeJSON(raw){
+  let s=String(raw).replace(/```json/gi,"").replace(/```/g,"").trim();
+  try{ return JSON.parse(s); }catch(e){}
+  const a=s.indexOf("{"), b=s.lastIndexOf("}");
+  if(a>=0 && b>a){ return JSON.parse(s.slice(a,b+1)); }
+  throw new Error("fant ingen gyldig JSON i svaret");
+}
+
 window.MM_renderAdmin=function(){
   const list=document.getElementById("admList"), st=document.getElementById("admStatus");
   if(!list) return;
@@ -1806,7 +1815,7 @@ async function admRun(r,body){
     });
     if(!res.ok) throw new Error("funksjon svarte "+res.status);
     const data=await res.json();
-    const obj=JSON.parse((data.raw||"").replace(/```json/g,"").replace(/```/g,"").trim());
+    const obj=mmParseRecipeJSON(data.raw||"");
     const steps=(obj.steps||[]).filter(s=>typeof s==="string"&&s.trim()).slice(0,9);
     const timeMin=Math.max(5,Math.min(180,parseInt(obj.timeMin,10)||r.tid||30));
     if(!steps.length) throw new Error("ingen steg i svaret");
