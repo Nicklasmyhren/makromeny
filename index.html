@@ -230,6 +230,14 @@
   .adm-warnbox{margin-top:10px;background:#fbf6ee;border:1px solid #ecdcc4;border-radius:9px;padding:9px 12px;font-size:12.5px;color:var(--kroner);}
   .adm-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
 
+  /* ---------- MINE UKER ---------- */
+  .wk-group{margin-top:26px;}
+  .wk-head{font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:700;margin:0 0 10px;color:var(--spruce);}
+  .wk-name{font-weight:600;font-size:14.5px;flex:1;min-width:160px;}
+  .wk-dishes{margin:8px 0 0;font-size:13px;color:var(--muted);line-height:1.55;}
+  .wk-empty{border:1px dashed var(--line);border-radius:var(--radius);padding:18px;font-size:13px;color:var(--muted);background:var(--card);}
+  .wk-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;}
+
   body::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.035;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)'/%3E%3C/svg%3E");}
   .topbar{background:rgba(255,255,255,.86);backdrop-filter:saturate(1.3) blur(8px);-webkit-backdrop-filter:saturate(1.3) blur(8px);}
@@ -370,7 +378,7 @@
     <nav class="tb-nav" id="tbNav">
       <button class="tb-link is-here" data-nav="home">Hjem</button>
       <button class="tb-link" data-nav="plan">Lag ukesmeny</button>
-      <button class="tb-link" data-nav="history">Historikk</button>
+      <button class="tb-link" data-nav="history">Mine uker</button>
       <button class="tb-link" data-nav="stats">Statistikk</button>
       <button class="tb-link" id="openProfile" hidden>Min profil</button>
       <button class="tb-link" id="navAdmin" data-nav="admin" hidden>Admin</button>
@@ -513,9 +521,12 @@
 
 <section class="page" id="page-history" hidden>
   <div class="page-plain">
-    <h2>Menyhistorikk</h2>
-    <p class="psub">Tidligere ukesmenyer du har lagret.</p>
-    <div class="soon"><div class="si">📖</div>Snart kan du åpne tidligere menyer her — og se oppskriftene på nytt.</div>
+    <h2>Mine uker</h2>
+    <p class="psub">Ukesmenyene dine — den aktive uka, planlagte uker fremover, og arkivet.</p>
+    <div id="weeksMsg" class="auth-msg"></div>
+    <div class="wk-group"><h3 class="wk-head">Aktiv uke</h3><div id="wkAktiv" class="adm-list"></div></div>
+    <div class="wk-group"><h3 class="wk-head">Planlagte uker</h3><div id="wkPlanlagt" class="adm-list"></div></div>
+    <div class="wk-group"><h3 class="wk-head">Arkiv</h3><div id="wkArkiv" class="adm-list"></div></div>
   </div>
 </section>
 
@@ -549,6 +560,7 @@
     document.querySelectorAll(".tb-link[data-nav]").forEach(b=>b.classList.toggle("is-here",b.dataset.nav===name));
     if(nav) nav.classList.remove("open");
     if(name==="admin"&&window.MM_renderAdmin) window.MM_renderAdmin();
+    if(name==="history"&&window.MM_renderWeeks) window.MM_renderWeeks();
     window.scrollTo(0,0);
   }
   window.MM_goto=goto;
@@ -996,6 +1008,7 @@ function interpretLocal(text,state){
 
 /* ---------- GENERER PLAN ---------- */
 async function buildPlan(state){
+  if(window.MM_resetWeekSession) window.MM_resetWeekSession();
   let interp;
   // Fast profiltekst + det brukeren skriver denne gangen, sendes samlet til Claude.
   const parts=[profileContext, state.freeText].map(s=>(s||"").trim()).filter(Boolean);
@@ -1253,11 +1266,22 @@ function render(){
 
   const useBar=document.createElement("div");useBar.className="use-menu-bar anim";
   const trekkerFra = state.brukHarHjemme && Object.keys(shop.brukt||{}).length>0;
-  const useHint = trekkerFra
-    ? "Lagrer uka i historikken så neste meny varierer rettene, og trekker de brukte varene fra «Har hjemme»."
-    : "Lagrer uka i historikken, så neste meny varierer rettene.";
-  useBar.innerHTML=`<button class="use-menu" id="useMenuBtn">Bruk denne menyen</button><span class="use-menu-hint">${useHint}</span>`;
+  const useHint = "Lagrer uka i «Mine uker», der den ligger trygt til du skal handle og lage maten — også om du lukker siden.";
+  useBar.innerHTML=`<button class="use-menu" id="useMenuBtn">Lagre meny</button><span class="use-menu-hint">${useHint}</span>`;
   el.appendChild(useBar);
+
+  const umb=document.getElementById("useMenuBtn");
+  if(umb) umb.addEventListener("click",async()=>{
+    const ids=plan.map(r=>r.id);
+    const meta={persons:state.persons, dietMode:state.current.dietMode||null, avoid:Array.isArray(state.current.avoid)?state.current.avoid:[], brukHjemme:!!trekkerFra};
+    umb.disabled=true; umb.textContent="Lagrer …";
+    const res = window.MM_saveWeek ? await window.MM_saveWeek(ids,meta) : {ok:false};
+    if(res&&res.ok){
+      umb.textContent = res.status==="aktiv" ? "✓ Lagret som aktiv uke" : "✓ Lagret som planlagt uke";
+    }
+    else if(res&&res.reason==="login"){ umb.textContent="Lagre meny"; umb.disabled=false; }
+    else { umb.textContent="Kunne ikke lagre — prøv igjen"; setTimeout(()=>{umb.textContent="Lagre meny";umb.disabled=false;},1800); }
+  });
 
   const sh2=document.createElement("div");sh2.className="section-h anim";
   sh2.innerHTML=`<h2>Handleliste</h2><span class="meta">${shop.lines.length} varer</span>`;el.appendChild(sh2);
@@ -1273,22 +1297,6 @@ function render(){
   el.querySelectorAll(".swap").forEach(b=>b.addEventListener("click",()=>swapDinner(parseInt(b.dataset.idx,10))));
   el.querySelectorAll(".recipe-btn").forEach(b=>b.addEventListener("click",()=>toggleRecipe(parseInt(b.dataset.idx,10),b)));
 
-  const umb=document.getElementById("useMenuBtn");
-  if(umb) umb.addEventListener("click",async()=>{
-    const ids=plan.map(r=>r.id);
-    umb.disabled=true; umb.textContent="Lagrer …";
-    const res = window.MM_saveCurrentMenu ? await window.MM_saveCurrentMenu(ids) : {ok:false,reason:"unavailable"};
-    if(res&&res.ok){
-      // Samme handling trekker også fra beholdningen, når den er i bruk.
-      let trakkFra=false;
-      if(trekkerFra && window.MM_forbrukHarHjemme){
-        trakkFra = await window.MM_forbrukHarHjemme(shop.brukt);
-      }
-      umb.textContent = trakkFra ? "✓ Lagret — beholdningen er oppdatert" : "✓ Lagret i historikken";
-    }
-    else if(res&&res.reason==="login"){ umb.textContent="Bruk denne menyen"; umb.disabled=false; }
-    else { umb.textContent="Kunne ikke lagre — prøv igjen"; setTimeout(()=>{umb.textContent="Bruk denne menyen";umb.disabled=false;},1800); }
-  });
 }
 
 function swapDinner(idx){
@@ -1872,21 +1880,126 @@ async function admSave(r,rec,body){
 async function loadRecent(user){
   if(!supabase||!user||!window.MM_setRecentRecipes) return;
   try{
-    const { data }=await supabase.from("menus").select("recipe_ids").order("created_at",{ascending:false}).limit(2);
+    const { data }=await supabase.from("menus").select("recipe_ids").eq("brukt",true).order("created_at",{ascending:false}).limit(2);
     const ids=(data||[]).flatMap(m=>m.recipe_ids||[]);
     window.MM_setRecentRecipes(ids);
   }catch(e){ console.warn("Kunne ikke hente historikk:",e); }
 }
-window.MM_saveCurrentMenu=async(ids)=>{
+/* ---------- MINE UKER ---------- */
+let mmCurrentWeekId=null; // samme økt + samme plan => oppdater raden i stedet for å lage duplikat
+window.MM_resetWeekSession=()=>{ mmCurrentWeekId=null; };
+
+window.MM_saveWeek=async(ids,meta)=>{
   if(!supabase) return {ok:false,reason:"unavailable"};
   const { data:{ user } }=await supabase.auth.getUser();
   if(!user){ openModal(); return {ok:false,reason:"login"}; }
   try{
-    const { error }=await supabase.from("menus").insert({ user_id:user.id, recipe_ids:ids });
+    if(mmCurrentWeekId){
+      const { data, error }=await supabase.from("menus")
+        .update({ recipe_ids:ids, meta }).eq("id",mmCurrentWeekId).eq("user_id",user.id).select("id,status");
+      if(error) throw error;
+      if(data&&data.length) return {ok:true,status:data[0].status};
+      mmCurrentWeekId=null; // raden fantes ikke lenger — fall igjennom til ny lagring
+    }
+    const { data:akt, error:e1 }=await supabase.from("menus").select("id").eq("user_id",user.id).eq("status","aktiv").limit(1);
+    if(e1) throw e1;
+    const status=(akt&&akt.length)?"planlagt":"aktiv";
+    const d=new Date();
+    const navn="Meny "+d.getDate()+"."+(d.getMonth()+1)+" kl "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+    const { data:ny, error:e2 }=await supabase.from("menus")
+      .insert({ user_id:user.id, recipe_ids:ids, navn, status, brukt:false, meta }).select("id");
+    if(e2) throw e2;
+    if(ny&&ny.length) mmCurrentWeekId=ny[0].id;
+    return {ok:true,status};
+  }catch(e){ console.warn("Kunne ikke lagre uke:",e); return {ok:false,reason:"error"}; }
+};
+
+function wkMsg(t,txt){ const m=$("weeksMsg"); if(m){ m.className="auth-msg "+(t||""); m.textContent=txt||""; } }
+function wkDishNames(ids){
+  return (ids||[]).map(id=>{ const r=(typeof RECIPES!=="undefined")?RECIPES.find(x=>x.id===id):null; return r?r.navn:null; })
+    .filter(Boolean).join(" · ") || "(rettene finnes ikke lenger i databasen)";
+}
+function wkCard(m,knapper){
+  const d=m.created_at? new Date(m.created_at):null;
+  const dato=d? d.getDate()+"."+(d.getMonth()+1)+"."+d.getFullYear():"";
+  const div=document.createElement("div"); div.className="adm-row";
+  div.innerHTML=`<div class="adm-top">
+      <span class="wk-name">${escapeHtml(m.navn||"Uten navn")}</span>
+      <span class="wk-date">${dato}</span>
+      ${knapper}
+    </div>
+    <div class="wk-dishes">${escapeHtml(wkDishNames(m.recipe_ids))}</div>
+    <div class="auth-msg" id="wkMsg-${m.id}"></div>`;
+  return div;
+}
+async function wkSetStatus(id,status){
+  const { data:{ user } }=await supabase.auth.getUser(); if(!user) return false;
+  const { data, error }=await supabase.from("menus").update({ status }).eq("id",id).eq("user_id",user.id).select("id");
+  if(error||!data||!data.length){ console.warn("Statusbytte feilet:",error); return false; }
+  return true;
+}
+window.MM_renderWeeks=async function(){
+  const cA=$("wkAktiv"), cP=$("wkPlanlagt"), cR=$("wkArkiv");
+  if(!cA||!cP||!cR) return;
+  wkMsg("","");
+  if(!supabase){ cA.innerHTML=`<div class="wk-empty">Supabase er utilgjengelig.</div>`; return; }
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(!user){
+    cA.innerHTML=`<div class="wk-empty">Logg inn for å se ukene dine.</div>`;
+    cP.innerHTML=""; cR.innerHTML=""; return;
+  }
+  let rows=[];
+  try{
+    const { data, error }=await supabase.from("menus")
+      .select("id,navn,status,brukt,recipe_ids,meta,created_at")
+      .eq("user_id",user.id).order("created_at",{ascending:false});
     if(error) throw error;
-    if(window.MM_addRecentRecipes) window.MM_addRecentRecipes(ids);
-    return {ok:true};
-  }catch(e){ console.warn("Kunne ikke lagre meny:",e); return {ok:false,reason:"error"}; }
+    rows=data||[];
+  }catch(e){ wkMsg("err","Kunne ikke hente ukene dine: "+(e.message||e)); return; }
+
+  const akt=rows.filter(m=>m.status==="aktiv");
+  const plan=rows.filter(m=>m.status==="planlagt");
+  const ark=rows.filter(m=>m.status!=="aktiv"&&m.status!=="planlagt");
+
+  cA.innerHTML=""; cP.innerHTML=""; cR.innerHTML="";
+  if(!akt.length) cA.innerHTML=`<div class="wk-empty">Ingen aktiv uke. Lagre en meny fra «Lag ukesmeny», eller flytt en hit fra planlagte/arkivet.</div>`;
+  akt.forEach(m=>{
+    const el=wkCard(m,`<button class="swap" data-wk="arkiver" data-id="${m.id}">Legg i arkiv</button>`);
+    cA.appendChild(el);
+  });
+  if(!plan.length) cP.innerHTML=`<div class="wk-empty">Ingen planlagte uker ennå.</div>`;
+  plan.forEach(m=>{
+    const el=wkCard(m,`<button class="swap" data-wk="aktiver" data-id="${m.id}">Sett som aktiv</button>
+      <button class="swap" data-wk="arkiver" data-id="${m.id}">Legg i arkiv</button>`);
+    cP.appendChild(el);
+  });
+  if(!ark.length) cR.innerHTML=`<div class="wk-empty">Arkivet er tomt.</div>`;
+  ark.forEach(m=>{
+    const el=wkCard(m,`<button class="swap" data-wk="aktiver" data-id="${m.id}">Tilbake til aktiv</button>
+      <button class="swap" data-wk="slett" data-id="${m.id}">Slett permanent</button>`);
+    cR.appendChild(el);
+  });
+
+  const harAktiv=akt.length>0;
+  document.querySelectorAll("[data-wk]").forEach(b=>b.addEventListener("click",async()=>{
+    const id=b.dataset.id, act=b.dataset.wk;
+    const m=document.getElementById("wkMsg-"+id);
+    const setM=(t,txt)=>{ if(m){ m.className="auth-msg "+t; m.textContent=txt; } };
+    if(act==="aktiver"){
+      if(harAktiv){ setM("err","Det ligger allerede en uke som aktiv. Legg den i arkivet først, så blir plassen ledig."); return; }
+      if(await wkSetStatus(id,"aktiv")) window.MM_renderWeeks(); else setM("err","Kunne ikke flytte uka.");
+    }
+    if(act==="arkiver"){
+      if(await wkSetStatus(id,"arkivert")) window.MM_renderWeeks(); else setM("err","Kunne ikke arkivere uka.");
+    }
+    if(act==="slett"){
+      if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="Sikker? Slett for alltid"; setM("err","Dette kan ikke angres. Trykk en gang til for å slette."); return; }
+      const { data:{ user } }=await supabase.auth.getUser(); if(!user) return;
+      const { data, error }=await supabase.from("menus").delete().eq("id",id).eq("user_id",user.id).select("id");
+      if(error||!data||!data.length){ setM("err","Kunne ikke slette."); return; }
+      window.MM_renderWeeks();
+    }
+  }));
 };
 
 // Modal-knapper
