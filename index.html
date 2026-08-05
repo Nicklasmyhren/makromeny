@@ -237,6 +237,11 @@
   .wk-dishes{margin:8px 0 0;font-size:13px;color:var(--muted);line-height:1.55;}
   .wk-empty{border:1px dashed var(--line);border-radius:var(--radius);padding:18px;font-size:13px;color:var(--muted);background:var(--card);}
   .wk-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;}
+  .wk-body{margin-top:12px;border-top:1px dashed var(--line);padding-top:14px;}
+  .wk-meals{display:flex;flex-direction:column;gap:10px;}
+  .wk-editname{cursor:pointer;border:none;background:none;color:var(--muted);font-size:13px;padding:2px 4px;line-height:1;}
+  .wk-editname:hover{color:var(--spruce);}
+  .wk-nameinput{font:inherit;font-size:13.5px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;max-width:170px;}
 
   body::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.035;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)'/%3E%3C/svg%3E");}
@@ -1175,6 +1180,34 @@ function macroBar(name,val,target,color){
     <div class="track"><div class="fill" style="width:${w}%;background:${color}"></div><div class="target-mark" style="left:${tx}%"></div></div></div>`;
 }
 
+/* ---------- MINE UKER: full visning av en lagret uke ---------- */
+window.MM_buildWeekHTML=function(ids,persons,uid){
+  const plan=(ids||[]).map(id=>RECIPES.find(r=>r.id===id)).filter(Boolean);
+  const missing=(ids||[]).length-plan.length;
+  if(!plan.length) return `<div class="wk-empty">Rettene i denne uka finnes ikke lenger i databasen.</div>`;
+  const p=Math.max(1,Number(persons)||2);
+  const meals=plan.map(r=>{
+    const s=STATS[r.id]||{kcal:0,p:0,k:0,f:0};
+    return `<div class="meal wk-meal"><div class="body">
+      <div class="title">${r.navn}<span class="tagdot">${r.vegan?"Vegansk":(TAG_LABEL[r.tag]||r.tag)}</span></div>
+      ${(r.niva||r.kjokken||r.tid)?`<div class="rmeta">${[r.niva,r.kjokken,r.tid?r.tid+" min":null].filter(Boolean).join(" · ")}</div>`:""}
+      ${macroGrid(s)}<div class="ingredients">${r.ing.map(([id])=>ING[id]?ING[id].n:id).join(" · ")}</div>
+      <div class="foot"><button class="recipe-btn" data-wkrecipe="${r.id}">Vis oppskrift</button></div>
+      <div class="recipe-panel" id="wkRecipe-${uid}-${r.id}"></div>
+    </div></div>`;
+  }).join("");
+  // Handlelista vises uten «Har hjemme»-fratrekk: beholdningen kan ha endret seg siden uka ble lagret.
+  const prev=state.brukHarHjemme; state.brukHarHjemme=false;
+  const shop=buildShopping(plan,p);
+  state.brukHarHjemme=prev;
+  const rows=shop.lines.map(l=>`<div class="r-line"><span class="r-name">${l.navn}${l.packs>1?` <small>${l.packs} × ${l.pk}</small>`:` <small>${l.pk}</small>`}</span><span class="r-lead"></span><span class="r-price">${fmt(l.cost)} kr</span></div>`).join("");
+  return `${missing>0?`<div class="wk-empty" style="margin-bottom:12px;">${missing} rett${missing>1?"er":""} fra denne uka finnes ikke lenger i databasen og vises ikke.</div>`:""}
+    <div class="wk-meals">${meals}</div>
+    <div class="section-h" style="margin-top:18px;"><h2>Handleliste</h2><span class="meta">${shop.lines.length} varer · ${p} pers</span></div>
+    <div class="receipt"><div class="r-head"><div class="store">Vekes</div><div class="sub">Handleliste · veiledende priser</div></div>
+    ${rows}<div class="r-total"><span class="t-lab">TOTALT</span><span class="t-val num">${fmt(shop.total)} kr</span></div></div>`;
+};
+
 function showLoading(){
   const el=document.getElementById("results");
   el.innerHTML=`<div class="loading"><span class="spinner"></span> Claude leser hverdagen din og setter målene…</div>`;
@@ -1904,10 +1937,8 @@ window.MM_saveWeek=async(ids,meta)=>{
     const { data:akt, error:e1 }=await supabase.from("menus").select("id").eq("user_id",user.id).eq("status","aktiv").limit(1);
     if(e1) throw e1;
     const status=(akt&&akt.length)?"planlagt":"aktiv";
-    const d=new Date();
-    const navn="Meny "+d.getDate()+"."+(d.getMonth()+1)+" kl "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
     const { data:ny, error:e2 }=await supabase.from("menus")
-      .insert({ user_id:user.id, recipe_ids:ids, navn, status, brukt:false, meta }).select("id");
+      .insert({ user_id:user.id, recipe_ids:ids, navn:null, status, brukt:false, meta }).select("id");
     if(e2) throw e2;
     if(ny&&ny.length) mmCurrentWeekId=ny[0].id;
     return {ok:true,status};
@@ -1915,22 +1946,95 @@ window.MM_saveWeek=async(ids,meta)=>{
 };
 
 function wkMsg(t,txt){ const m=$("weeksMsg"); if(m){ m.className="auth-msg "+(t||""); m.textContent=txt||""; } }
+const MND_KORT=["jan","feb","mar","apr","mai","jun","jul","aug","sep","okt","nov","des"];
+function wkFmtDato(iso){
+  if(!iso) return "";
+  const d=new Date(iso); if(isNaN(d)) return "";
+  const kl=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  return d.getDate()+". "+MND_KORT[d.getMonth()]+" kl. "+kl; // lokal tid = da du faktisk lagde den
+}
 function wkDishNames(ids){
   return (ids||[]).map(id=>{ const r=(typeof RECIPES!=="undefined")?RECIPES.find(x=>x.id===id):null; return r?r.navn:null; })
     .filter(Boolean).join(" · ") || "(rettene finnes ikke lenger i databasen)";
 }
 function wkCard(m,knapper){
-  const d=m.created_at? new Date(m.created_at):null;
-  const dato=d? d.getDate()+"."+(d.getMonth()+1)+"."+d.getFullYear():"";
+  const custom=(m.navn||"").trim();
+  const vist=custom||("Meny "+wkFmtDato(m.created_at));
+  const dato=custom?`<span class="wk-date">${wkFmtDato(m.created_at)}</span>`:"";
   const div=document.createElement("div"); div.className="adm-row";
   div.innerHTML=`<div class="adm-top">
-      <span class="wk-name">${escapeHtml(m.navn||"Uten navn")}</span>
-      <span class="wk-date">${dato}</span>
+      <span class="wk-name" id="wkName-${m.id}">${escapeHtml(vist)}</span>
+      <button class="wk-editname" data-editname="${m.id}" title="Gi uka et navn">✎</button>
+      ${dato}
+      <button class="swap" data-open="${m.id}">Vis uke</button>
       ${knapper}
     </div>
     <div class="wk-dishes">${escapeHtml(wkDishNames(m.recipe_ids))}</div>
+    <div class="wk-body" id="wkBody-${m.id}" hidden></div>
     <div class="auth-msg" id="wkMsg-${m.id}"></div>`;
   return div;
+}
+
+function wkToggleOpen(m,btn){
+  if(!m) return;
+  const body=document.getElementById("wkBody-"+m.id); if(!body) return;
+  if(!body.hidden){ body.hidden=true; btn.textContent="Vis uke"; return; }
+  if(!body.dataset.filled){
+    const persons=(m.meta&&Number(m.meta.persons))||2;
+    body.innerHTML=window.MM_buildWeekHTML?window.MM_buildWeekHTML(m.recipe_ids,persons,m.id):"";
+    body.dataset.filled="1";
+    body.querySelectorAll("[data-wkrecipe]").forEach(rb=>rb.addEventListener("click",()=>wkShowRecipe(rb.dataset.wkrecipe,persons,rb,m.id)));
+  }
+  body.hidden=false; btn.textContent="Skjul uke";
+}
+
+async function wkShowRecipe(rid,persons,btn,uid){
+  const panel=document.getElementById("wkRecipe-"+uid+"-"+rid); if(!panel) return;
+  if(panel.dataset.open==="1"){ panel.innerHTML=""; panel.dataset.open="0"; btn.textContent="Vis oppskrift"; return; }
+  panel.dataset.open="1"; btn.textContent="Skjul oppskrift";
+  const r=(typeof RECIPES!=="undefined")?RECIPES.find(x=>x.id===rid):null;
+  if(!r){ panel.innerHTML=`<div class="rp-err">Fant ikke retten.</div>`; return; }
+  // 1) Lagret fremgangsmåte fra databasen — umiddelbar og gratis.
+  let rec=null;
+  if(r.fremgangsmate){
+    try{
+      const o=typeof r.fremgangsmate==="string"?JSON.parse(r.fremgangsmate):r.fremgangsmate;
+      if(o&&Array.isArray(o.steps)&&o.steps.length) rec={timeMin:o.timeMin||r.tid||30,steps:o.steps};
+    }catch(e){}
+  }
+  // 2) Ellers: hent fra Claude som før.
+  if(!rec){
+    panel.innerHTML=`<div class="recipe-inner"><div class="loading-sm"><span class="spinner sp-dark"></span> Henter oppskrift …</div></div>`;
+    try{ rec=await fetchRecipe(r,persons); }
+    catch(e){ console.warn("Ukeoppskrift feilet:",e); panel.innerHTML=`<div class="recipe-inner"><div class="rp-err">Kunne ikke hente oppskriften nå — prøv igjen om litt.</div></div>`; return; }
+  }
+  panel.innerHTML=`<div class="recipe-inner">
+    <div class="recipe-head"><span class="rp-lab">Fremgangsmåte</span><span class="rp-time">~${rec.timeMin} min</span></div>
+    <ol class="recipe-steps">${rec.steps.map(s=>`<li>${escapeHtml(s)}</li>`).join("")}</ol>
+  </div>`;
+}
+
+async function wkEditName(m){
+  if(!m) return;
+  const span=document.getElementById("wkName-"+m.id); if(!span||span.dataset.editing==="1") return;
+  span.dataset.editing="1";
+  const old=(m.navn||"").trim();
+  span.innerHTML=`<input class="wk-nameinput" value="${escapeHtml(old)}" placeholder="F.eks. Hyttetur" maxlength="40">
+    <button class="swap" data-n="ok">Lagre</button><button class="swap" data-n="avbryt">Avbryt</button>`;
+  const inp=span.querySelector("input"); inp.focus();
+  const done=()=>{ span.dataset.editing="0"; window.MM_renderWeeks(); };
+  const save=async()=>{
+    const nytt=inp.value.trim()||null;
+    try{
+      const { data:{ user } }=await supabase.auth.getUser(); if(!user) return done();
+      const { error }=await supabase.from("menus").update({ navn:nytt }).eq("id",m.id).eq("user_id",user.id);
+      if(error) throw error;
+    }catch(e){ const ms=document.getElementById("wkMsg-"+m.id); if(ms){ ms.className="auth-msg err"; ms.textContent="Kunne ikke lagre navnet."; } }
+    done();
+  };
+  span.querySelector('[data-n="ok"]').addEventListener("click",save);
+  span.querySelector('[data-n="avbryt"]').addEventListener("click",done);
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter") save(); if(e.key==="Escape") done(); });
 }
 async function wkSetStatus(id,status){
   const { data:{ user } }=await supabase.auth.getUser(); if(!user) return false;
@@ -1980,8 +2084,12 @@ window.MM_renderWeeks=async function(){
     cR.appendChild(el);
   });
 
+  const rowsById={}; rows.forEach(x=>rowsById[x.id]=x);
+  const pg=document.getElementById("page-history");
+  pg.querySelectorAll("[data-open]").forEach(b=>b.addEventListener("click",()=>wkToggleOpen(rowsById[b.dataset.open],b)));
+  pg.querySelectorAll("[data-editname]").forEach(b=>b.addEventListener("click",()=>wkEditName(rowsById[b.dataset.editname])));
   const harAktiv=akt.length>0;
-  document.querySelectorAll("[data-wk]").forEach(b=>b.addEventListener("click",async()=>{
+  pg.querySelectorAll("[data-wk]").forEach(b=>b.addEventListener("click",async()=>{
     const id=b.dataset.id, act=b.dataset.wk;
     const m=document.getElementById("wkMsg-"+id);
     const setM=(t,txt)=>{ if(m){ m.className="auth-msg "+t; m.textContent=txt; } };
