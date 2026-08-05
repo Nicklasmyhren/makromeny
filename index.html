@@ -1208,6 +1208,17 @@ window.MM_buildWeekHTML=function(ids,persons,uid){
     ${rows}<div class="r-total"><span class="t-lab">TOTALT</span><span class="t-val num">${fmt(shop.total)} kr</span></div></div>`;
 };
 
+// Beregner hvor mye av beholdningen en lagret uke bruker («Bruk denne menyen» i Mine uker).
+// Regner mot beholdningen slik den er NÅ — man kan bare bruke det man faktisk har.
+window.MM_shopBrukt=function(ids,persons){
+  const plan=(ids||[]).map(id=>RECIPES.find(r=>r.id===id)).filter(Boolean);
+  if(!plan.length) return {};
+  const prev=state.brukHarHjemme; state.brukHarHjemme=true;
+  const shop=buildShopping(plan,Math.max(1,Number(persons)||2));
+  state.brukHarHjemme=prev;
+  return shop.brukt||{};
+};
+
 function showLoading(){
   const el=document.getElementById("results");
   el.innerHTML=`<div class="loading"><span class="spinner"></span> Claude leser hverdagen din og setter målene…</div>`;
@@ -1966,6 +1977,7 @@ function wkCard(m,knapper){
       <span class="wk-name" id="wkName-${m.id}">${escapeHtml(vist)}</span>
       <button class="wk-editname" data-editname="${m.id}" title="Gi uka et navn">✎</button>
       ${dato}
+      ${m.brukt?`<span class="adm-chip ok">✓ Brukt</span>`:""}
       <button class="swap" data-open="${m.id}">Vis uke</button>
       ${knapper}
     </div>
@@ -2068,7 +2080,8 @@ window.MM_renderWeeks=async function(){
   cA.innerHTML=""; cP.innerHTML=""; cR.innerHTML="";
   if(!akt.length) cA.innerHTML=`<div class="wk-empty">Ingen aktiv uke. Lagre en meny fra «Lag ukesmeny», eller flytt en hit fra planlagte/arkivet.</div>`;
   akt.forEach(m=>{
-    const el=wkCard(m,`<button class="swap" data-wk="arkiver" data-id="${m.id}">Legg i arkiv</button>`);
+    const bruk=m.brukt?"":`<button class="auth-btn" data-wk="bruk" data-id="${m.id}" title="Registrerer uka som brukt, så neste meny varierer rettene — og trekker fra beholdningen hvis den var i bruk.">Bruk denne menyen</button>`;
+    const el=wkCard(m,`${bruk}<button class="swap" data-wk="arkiver" data-id="${m.id}">Legg i arkiv</button>`);
     cA.appendChild(el);
   });
   if(!plan.length) cP.innerHTML=`<div class="wk-empty">Ingen planlagte uker ennå.</div>`;
@@ -2093,6 +2106,30 @@ window.MM_renderWeeks=async function(){
     const id=b.dataset.id, act=b.dataset.wk;
     const m=document.getElementById("wkMsg-"+id);
     const setM=(t,txt)=>{ if(m){ m.className="auth-msg "+t; m.textContent=txt; } };
+    if(act==="bruk"){
+      const row=rowsById[id]; if(!row) return;
+      b.disabled=true; b.textContent="Registrerer …";
+      try{
+        const { data:{ user } }=await supabase.auth.getUser(); if(!user) throw new Error("Du må være innlogget.");
+        const { data, error }=await supabase.from("menus").update({ brukt:true }).eq("id",id).eq("user_id",user.id).select("id");
+        if(error) throw error;
+        if(!data||!data.length) throw new Error("Fikk ikke registrert uka.");
+        if(window.MM_addRecentRecipes) window.MM_addRecentRecipes(row.recipe_ids||[]);
+        let trakk=false;
+        if(row.meta&&row.meta.brukHjemme&&window.MM_shopBrukt&&window.MM_forbrukHarHjemme){
+          const brukt=window.MM_shopBrukt(row.recipe_ids||[],(row.meta&&Number(row.meta.persons))||2);
+          if(brukt&&Object.keys(brukt).length) trakk=await window.MM_forbrukHarHjemme(brukt);
+        }
+        await window.MM_renderWeeks();
+        wkMsg("ok", trakk
+          ? "✓ Uka er registrert som brukt — beholdningen er oppdatert, og neste meny varierer rettene."
+          : "✓ Uka er registrert som brukt — neste meny varierer rettene.");
+      }catch(e){
+        b.disabled=false; b.textContent="Bruk denne menyen";
+        setM("err",e.message||String(e));
+      }
+      return;
+    }
     if(act==="aktiver"){
       if(harAktiv){ setM("err","Det ligger allerede en uke som aktiv. Legg den i arkivet først, så blir plassen ledig."); return; }
       if(await wkSetStatus(id,"aktiv")) window.MM_renderWeeks(); else setM("err","Kunne ikke flytte uka.");
