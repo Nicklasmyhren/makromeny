@@ -845,8 +845,9 @@ const STATS={};RECIPES.forEach(r=>STATS[r.id]=recipeStats(r));
 function mmBeregnAvledet(fraSupabase){
   if(!fraSupabase){
     RECIPES.forEach(r=>{ const m=RETT_META[r.id]; if(m){ r.niva=m.niva; r.kjokken=m.kjokken; r.tid=m.tid; r.beskrivelse=m.desc; } });
-    RECIPES.forEach(r=>{ r.vegan = r.ing.every(([id])=> !ANIMALSK.has(id)); });
   }
+  // Vegansk utledes alltid fra råvarene — samme sannhet uansett kilde, og selv-oppdaterende for nye retter.
+  RECIPES.forEach(r=>{ r.vegan = r.ing.every(([id])=> !ANIMALSK.has(id)); });
   RECIPES.forEach(r=>{ r.allergener=new Set(); for(const a in ALLERGENER){ if(r.ing.some(([id])=>ALLERGENER[a].has(id))) r.allergener.add(a); } });
   Object.keys(STATS).forEach(k=>delete STATS[k]);
   RECIPES.forEach(r=>STATS[r.id]=recipeStats(r));
@@ -966,6 +967,17 @@ function detectAllergies(text){
   if(/(nøtteallergi|notteallergi|uten nøtter|peanøtt|nøttefri)/.test(t)) a.push("nøtter");
   return a;
 }
+/* Deterministisk diett-leser (sikkerhetsnett, som allergier). Skiller de tre tilfellene:
+   'vegansk' = kun vegansk · 'vegetar' = kjøttfri MEN ikke vegansk · 'begge' = alt kjøttfritt. */
+function detectDiet(text){
+  const t=(text||"").toLowerCase();
+  const harVegan=/(vegansk|veganer|vegan|plantebasert|helt plantebasert|uten animalsk)/.test(t);
+  const harVegetar=/(vegetar|vegetarian|kjøttfri|kjottfri|uten kjøtt|uten kjott|kjøttfritt|kjottfritt)/.test(t);
+  if(harVegan && harVegetar) return "begge";
+  if(harVegan) return "vegansk";
+  if(harVegetar) return "vegetar";
+  return null;
+}
 /* regelbasert fallback (hvis API utilgjengelig, f.eks offline-deploy) */
 function interpretLocal(text,state){
   const t=(text||"").toLowerCase(); let goal=null,pref=null,vegOnly=false,veganOnly=false;
@@ -1002,8 +1014,15 @@ async function buildPlan(state){
   const cons=interp.constraints||{pinned:[],tagMin:[]};
   const N=state.dinners, maxPerTag=Math.max(2,Math.ceil(N/3));
 
-  // Diett-sjekk: vegansk er strengest (ingen animalske produkter), så vegetar (uten kjøtt/fisk), ellers alt.
-  const dietOk=r=> veganOnly ? r.vegan : (vegOnly ? r.veg : true);
+  // Diett: deterministisk lesing av teksten er autoritet (som allergier). Claude er mild reserve når teksten ikke sier noe eksplisitt.
+  let dietMode=detectDiet(text);
+  if(!dietMode && veganOnly) dietMode="vegansk";
+  else if(!dietMode && vegOnly) dietMode="begge";
+  // 'vegansk' = kun vegansk · 'vegetar' = kjøttfri men IKKE vegansk · 'begge' = alt kjøttfritt · ellers alt.
+  const dietOk=r=> dietMode==="vegansk" ? r.vegan
+                 : dietMode==="vegetar" ? (r.veg && !r.vegan)
+                 : dietMode==="begge"   ? r.veg
+                 : true;
   // Allergi-sjekk: bærende allergen -> retten er utrygg (filtreres bort). Tilpassbart -> behold, varsle.
   const avoid=Array.isArray(interp.avoid)?interp.avoid.filter(a=>a in ALLERGENER):[];
   const allergyOk=r=> recipeAllergyInfo(r,avoid).safe;
@@ -1018,7 +1037,7 @@ async function buildPlan(state){
   const warn = pool.length===0 ? "tom" : (pool.length<N ? "faa" : null);
   // Ingen trygge retter i det hele tatt -> ikke server noe utrygt; gi tydelig beskjed i stedet.
   if(pool.length===0){
-    return {plan:[],goal:interp.goal,pref,vegOnly,veganOnly,avoid,warn:"tom",daily,note:interp.note,constraints:cons,source:interp.source};
+    return {plan:[],goal:interp.goal,pref,vegOnly,veganOnly,dietMode,avoid,warn:"tom",daily,note:interp.note,constraints:cons,source:interp.source};
   }
   const ss=pool.map(r=>scoreRecipe(r,pref,daily));
   const spenn=(Math.max(...ss)-Math.min(...ss))||1;
@@ -1075,7 +1094,7 @@ async function buildPlan(state){
   }); });
   const advarslerObj={}; Object.keys(advarsler).forEach(a=>advarslerObj[a]=[...advarsler[a]]);
 
-  return {plan:slots,goal:interp.goal,pref,vegOnly,veganOnly,avoid,warn,advarsler:advarslerObj,daily,note:interp.note,constraints:cons,source:interp.source};
+  return {plan:slots,goal:interp.goal,pref,vegOnly,veganOnly,dietMode,avoid,warn,advarsler:advarslerObj,daily,note:interp.note,constraints:cons,source:interp.source};
 }
 
 /* ---------- HANDLELISTE ---------- */
@@ -1273,12 +1292,13 @@ function render(){
 }
 
 function swapDinner(idx){
-  const {plan,pref,daily,vegOnly,veganOnly,avoid}=state.current,used=new Set(plan.map(r=>r.id));
+  const {plan,pref,daily,dietMode,avoid}=state.current,used=new Set(plan.map(r=>r.id));
   const av=Array.isArray(avoid)?avoid:[];
   const NIVA_RANK={Enkel:1,Middels:2,Vanskelig:3,Ekspert:4};
   const fNiva=Number(state.fNiva)||4, fTid=Number(state.fTid)||90, fKj=Array.isArray(state.fKjokken)?state.fKjokken:[];
   const filterOk=r=> (NIVA_RANK[r.niva]||1)<=fNiva && (!r.tid||r.tid<=fTid) && (fKj.length===0||fKj.includes(r.kjokken));
-  const ok=r=> (veganOnly ? r.vegan : (vegOnly ? r.veg : true)) && recipeAllergyInfo(r,av).safe && filterOk(r);
+  const dietOk=r=> dietMode==="vegansk" ? r.vegan : dietMode==="vegetar" ? (r.veg && !r.vegan) : dietMode==="begge" ? r.veg : true;
+  const ok=r=> dietOk(r) && recipeAllergyInfo(r,av).safe && filterOk(r);
   let pool=RECIPES.filter(r=>ok(r)&&!used.has(r.id));
   if(!pool.length)pool=RECIPES.filter(ok);
   if(!pool.length) return;
