@@ -243,6 +243,47 @@
   .wk-editname:hover{color:var(--spruce);}
   .wk-nameinput{font:inherit;font-size:13.5px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;max-width:170px;}
 
+  /* ---------- STATISTIKK ---------- */
+  .stat-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:8px;}
+  @media (max-width:600px){ .stat-cards{grid-template-columns:1fr;} }
+  .stat-card{position:relative;text-align:left;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;display:flex;flex-direction:column;gap:7px;transition:transform .18s ease,box-shadow .18s ease,border-color .18s;font:inherit;overflow:hidden;}
+  .stat-card::after{content:"→";position:absolute;right:18px;top:18px;color:var(--muted);opacity:0;transform:translateX(-6px);transition:opacity .18s,transform .18s;font-size:15px;}
+  .stat-card:hover{transform:translateY(-3px);border-color:#cfe1ce;box-shadow:0 2px 4px rgba(20,36,28,.06),0 14px 32px rgba(20,36,28,.11);}
+  .stat-card:hover::after{opacity:1;transform:none;}
+  .sc-ic{font-size:22px;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;background:#f4f8f3;border:1px solid var(--line);border-radius:11px;transform:rotate(-3deg);}
+  .sc-t{font-family:'Bricolage Grotesque',sans-serif;font-size:16.5px;font-weight:700;color:var(--spruce);}
+  .sc-d{font-size:12.5px;color:var(--muted);line-height:1.55;}
+  .stat-back{cursor:pointer;border:none;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--muted);padding:0 0 12px;}
+  .stat-back:hover{color:var(--ink);}
+
+  /* Kvitteringsstripe: nøkkeltall som pris-poster, skilt med stiplede linjer */
+  .kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin:4px 0 20px;overflow:hidden;}
+  .kpi{padding:18px 20px 15px;border-left:1px dashed var(--line);}
+  .kpi:first-child{border-left:none;}
+  @media (max-width:640px){ .kpi{border-left:none;border-top:1px dashed var(--line);} .kpi:first-child{border-top:none;} }
+  .kpi-num{font-family:'Bricolage Grotesque',sans-serif;font-size:27px;font-weight:800;letter-spacing:-.02em;color:var(--spruce);line-height:1.05;display:flex;align-items:baseline;gap:4px;}
+  .kpi-suf{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--kroner);letter-spacing:.02em;}
+  .kpi-lab{font-size:12px;color:var(--muted);margin-top:5px;}
+  .kpi-sub{font-size:10.5px;color:var(--muted);margin-top:2px;font-family:'IBM Plex Mono',monospace;}
+
+  .stat-block{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:18px;}
+  .stat-block h3{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:700;margin:0 0 4px;color:var(--spruce);}
+  .stat-block h3::after{content:"";display:block;border-bottom:1px dashed var(--line);margin:10px 0 12px;}
+  .bar-row{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:12.5px;border-radius:8px;padding:2px 4px;transition:background .12s;}
+  .bar-row:hover{background:#f7faf6;}
+  .bar-lab{flex:0 0 118px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+  .bar-track{flex:1;background:#eef2ec;border-radius:6px;height:20px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(180deg,#37795a,var(--spruce-2));border-radius:6px 0 0 6px;min-width:2px;transition:width .55s cubic-bezier(.22,.8,.36,1);}
+  .bar-val{flex:0 0 auto;color:var(--ink);font-weight:600;white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
+
+  .donut-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
+  .donut{width:128px;height:128px;transform:rotate(0deg);flex:0 0 auto;}
+  .legend{display:flex;flex-direction:column;gap:6px;min-width:180px;flex:1;}
+  .legend-row{display:flex;align-items:center;gap:9px;font-size:12.5px;}
+  .legend-dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto;}
+  .legend-lab{flex:1;color:var(--ink);}
+  .legend-val{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+
   body::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.035;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)'/%3E%3C/svg%3E");}
   .topbar{background:rgba(255,255,255,.86);backdrop-filter:saturate(1.3) blur(8px);-webkit-backdrop-filter:saturate(1.3) blur(8px);}
@@ -538,8 +579,49 @@
 <section class="page" id="page-stats" hidden>
   <div class="page-plain">
     <h2>Statistikk</h2>
-    <p class="psub">Litt moro om matvanene dine.</p>
-    <div class="soon"><div class="si">📊</div>Snart ser du hvilke retter du lager mest, favorittkjøkkenet ditt, og mer.</div>
+    <p class="psub">Velg et tema. Statistikken bygger kun på uker du har trykket «Bruk denne menyen» på — altså mat du faktisk har laget.</p>
+    <div class="stat-cards">
+      <button class="stat-card" data-nav="stats-okonomi"><span class="sc-ic">💰</span><span class="sc-t">Økonomi</span><span class="sc-d">Hva maten koster, snitt per uke og per porsjon, dyreste og billigste uke.</span></button>
+      <button class="stat-card" data-nav="stats-mat"><span class="sc-ic">🍽</span><span class="sc-t">Mat &amp; smak</span><span class="sc-d">Mest brukte retter, favorittkjøkken og diett-fordeling.</span></button>
+      <button class="stat-card" data-nav="stats-ernaring"><span class="sc-ic">🥗</span><span class="sc-t">Ernæring</span><span class="sc-d">Snitt kalorier og makroer i maten du velger.</span></button>
+      <button class="stat-card" data-nav="stats-aktivitet"><span class="sc-ic">📅</span><span class="sc-t">Aktivitet</span><span class="sc-d">Hvor mye du planlegger og bruker Vekes.</span></button>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="page-stats-okonomi" hidden>
+  <div class="page-plain">
+    <button class="stat-back" data-nav="stats">← Statistikk</button>
+    <h2>Økonomi</h2>
+    <p class="psub">Basert på brukte uker. Prisene er dagens priser fra databasen, ikke hva uka kostet akkurat da — små forskjeller kan forekomme.</p>
+    <div id="okoInnhold"></div>
+  </div>
+</section>
+
+<section class="page" id="page-stats-mat" hidden>
+  <div class="page-plain">
+    <button class="stat-back" data-nav="stats">← Statistikk</button>
+    <h2>Mat &amp; smak</h2>
+    <p class="psub">Basert på brukte uker — maten du faktisk har laget.</p>
+    <div id="matInnhold"></div>
+  </div>
+</section>
+
+<section class="page" id="page-stats-ernaring" hidden>
+  <div class="page-plain">
+    <button class="stat-back" data-nav="stats">← Statistikk</button>
+    <h2>Ernæring</h2>
+    <p class="psub">Snittverdier per porsjon, basert på brukte uker.</p>
+    <div id="ernInnhold"></div>
+  </div>
+</section>
+
+<section class="page" id="page-stats-aktivitet" hidden>
+  <div class="page-plain">
+    <button class="stat-back" data-nav="stats">← Statistikk</button>
+    <h2>Aktivitet</h2>
+    <p class="psub">Hvor mye du planlegger og bruker Vekes.</p>
+    <div id="aktInnhold"></div>
   </div>
 </section>
 
@@ -557,7 +639,7 @@
 <script>
 /* ---------- NAVIGASJON (sider) ---------- */
 (function(){
-  const PAGES={home:"page-home",plan:"page-plan",history:"page-history",stats:"page-stats",admin:"page-admin"};
+  const PAGES={home:"page-home",plan:"page-plan",history:"page-history",stats:"page-stats","stats-okonomi":"page-stats-okonomi","stats-mat":"page-stats-mat","stats-ernaring":"page-stats-ernaring","stats-aktivitet":"page-stats-aktivitet",admin:"page-admin"};
   const nav=document.getElementById("tbNav");
   function goto(name){
     if(!PAGES[name]) return;
@@ -566,6 +648,10 @@
     if(nav) nav.classList.remove("open");
     if(name==="admin"&&window.MM_renderAdmin) window.MM_renderAdmin();
     if(name==="history"&&window.MM_renderWeeks) window.MM_renderWeeks();
+    if(name==="stats-okonomi"&&window.MM_renderOkonomi) window.MM_renderOkonomi();
+    if(name==="stats-mat"&&window.MM_renderMat) window.MM_renderMat();
+    if(name==="stats-ernaring"&&window.MM_renderErnaring) window.MM_renderErnaring();
+    if(name==="stats-aktivitet"&&window.MM_renderAktivitet) window.MM_renderAktivitet();
     window.scrollTo(0,0);
   }
   window.MM_goto=goto;
@@ -1958,6 +2044,203 @@ async function loadRecent(user){
     window.MM_setRecentRecipes(ids);
   }catch(e){ console.warn("Kunne ikke hente historikk:",e); }
 }
+/* ---------- STATISTIKK ---------- */
+// Bygger kun på BRUKTE uker (mat som faktisk ble laget). Priser = dagens priser.
+const STAT_FARGER=["#2e6b4f","#b4632a","#7f9b6a","#c9a227","#5b7d8c","#a35d6a","#8a6f4e","#4e8a7d"];
+
+async function statHentUker(kunBrukte){
+  if(!supabase) return {feil:"Supabase er utilgjengelig."};
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(!user) return {feil:"Logg inn for å se statistikken din."};
+  let q=supabase.from("menus").select("navn,status,brukt,recipe_ids,meta,created_at")
+    .eq("user_id",user.id).order("created_at",{ascending:true});
+  if(kunBrukte) q=q.eq("brukt",true);
+  const { data, error }=await q;
+  if(error) return {feil:"Kunne ikke hente data: "+(error.message||error)};
+  return {rader:data||[]};
+}
+function statPlan(ids){ return (ids||[]).map(id=>RECIPES.find(r=>r.id===id)).filter(Boolean); }
+function statTom(host,ikon,tekst){ host.innerHTML=`<div class="soon"><div class="si">${ikon}</div>${tekst}</div>`; }
+const STAT_TOM_TEKST=`Ingen brukte uker ennå. Lag en meny, trykk «Bruk denne menyen» i Mine uker — så fylles denne siden.`;
+
+// Kvitteringsstripe med nøkkeltall. Tallene teller seg opp som et kassaapparat.
+function statKpiStripe(items){
+  return `<div class="kpi-strip">`+items.map(it=>`<div class="kpi">
+    <div class="kpi-num"><span data-count="${it.tall}">0</span>${it.suffiks?`<span class="kpi-suf">${it.suffiks}</span>`:""}</div>
+    <div class="kpi-lab">${it.label}</div>${it.sub?`<div class="kpi-sub">${it.sub}</div>`:""}
+  </div>`).join("")+`</div>`;
+}
+function statTellOpp(host){
+  const reduser=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  host.querySelectorAll("[data-count]").forEach(el=>{
+    const mål=Number(el.dataset.count)||0;
+    if(reduser||mål<=0){ el.textContent=fmt(mål); return; }
+    const t0=performance.now(), varighet=650;
+    const steg=(t)=>{ const p=Math.min(1,(t-t0)/varighet), e=1-Math.pow(1-p,3);
+      el.textContent=fmt(mål*e); if(p<1) requestAnimationFrame(steg); };
+    requestAnimationFrame(steg);
+  });
+}
+// Ring-diagram (SVG) med tegnforklaring.
+function statRing(segmenter){
+  const sum=segmenter.reduce((s,x)=>s+x.verdi,0)||1;
+  const R=15.9155, C=100; let offset=25;
+  const ringer=segmenter.map((s,i)=>{
+    const pct=(s.verdi/sum)*100;
+    const el=`<circle r="${R}" cx="21" cy="21" fill="transparent" stroke="${STAT_FARGER[i%STAT_FARGER.length]}" stroke-width="5.5" stroke-dasharray="${pct} ${C-pct}" stroke-dashoffset="${offset}"></circle>`;
+    offset-=pct; return el;
+  }).join("");
+  const tegn=segmenter.map((s,i)=>`<div class="legend-row"><span class="legend-dot" style="background:${STAT_FARGER[i%STAT_FARGER.length]}"></span><span class="legend-lab">${escapeHtml(s.navn)}</span><span class="legend-val">${Math.round((s.verdi/sum)*100)} %</span></div>`).join("");
+  return `<div class="donut-wrap"><svg viewBox="0 0 42 42" class="donut">${ringer}</svg><div class="legend">${tegn}</div></div>`;
+}
+function statBar(lab,verdi,maks,visning){
+  const pct=Math.max(2,Math.round((verdi/(maks||1))*100));
+  return `<div class="bar-row"><span class="bar-lab" title="${escapeHtml(lab)}">${escapeHtml(lab)}</span><span class="bar-track"><span class="bar-fill" style="width:${pct}%"></span></span><span class="bar-val">${visning}</span></div>`;
+}
+function statUkeNavn(m){ const c=(m.navn||"").trim(); return c||("Meny "+wkFmtDato(m.created_at)); }
+
+/* --- Økonomi --- */
+window.MM_renderOkonomi=async function(){
+  const host=$("okoInnhold"); if(!host) return;
+  host.innerHTML=`<div class="loading-sm"><span class="spinner sp-dark"></span> Henter tallene …</div>`;
+  const res=await statHentUker(true);
+  if(res.feil){ statTom(host,"💰",escapeHtml(res.feil)); return; }
+  const uker=res.rader.map(m=>{
+    const plan=statPlan(m.recipe_ids); if(!plan.length) return null;
+    const pers=Math.max(1,Number(m.meta&&m.meta.persons)||2);
+    const prev=state.brukHarHjemme; state.brukHarHjemme=false;
+    const shop=buildShopping(plan,pers);
+    state.brukHarHjemme=prev;
+    return {navn:statUkeNavn(m),dato:m.created_at,total:shop.total,middager:plan.length,porsjoner:plan.length*pers};
+  }).filter(Boolean);
+  if(!uker.length){ statTom(host,"💰",STAT_TOM_TEKST); return; }
+
+  const totalSum=uker.reduce((s,u)=>s+u.total,0);
+  const totMid=uker.reduce((s,u)=>s+u.middager,0);
+  const totPor=uker.reduce((s,u)=>s+u.porsjoner,0);
+  const dyrest=uker.reduce((a,u)=>u.total>a.total?u:a,uker[0]);
+  const billigst=uker.reduce((a,u)=>u.total<a.total?u:a,uker[0]);
+
+  let html=statKpiStripe([
+    {tall:totalSum,suffiks:"kr",label:"Brukt totalt",sub:uker.length+(uker.length===1?" brukt uke":" brukte uker")},
+    {tall:totalSum/uker.length,suffiks:"kr",label:"Snitt per uke"},
+    {tall:totMid?totalSum/totMid:0,suffiks:"kr",label:"Snitt per middag"},
+    {tall:totPor?totalSum/totPor:0,suffiks:"kr",label:"Snitt per porsjon"}
+  ]);
+  html+=`<div class="stat-block"><h3>Billigste og dyreste uke</h3>
+    ${statBar(billigst.navn,billigst.total,dyrest.total,fmt(billigst.total)+" kr")}
+    ${statBar(dyrest.navn,dyrest.total,dyrest.total,fmt(dyrest.total)+" kr")}
+  </div>`;
+  const vis=uker.slice(-10), maks=Math.max(...vis.map(u=>u.total),1);
+  html+=`<div class="stat-block"><h3>Kostnad per uke${uker.length>10?" · siste 10":""}</h3>
+    ${vis.map(u=>{ const d=new Date(u.dato); const lab=isNaN(d)?u.navn:(d.getDate()+". "+MND_KORT[d.getMonth()]); return statBar(lab,u.total,maks,fmt(u.total)+" kr"); }).join("")}
+  </div>`;
+  host.innerHTML=html; statTellOpp(host);
+};
+
+/* --- Mat & smak --- */
+window.MM_renderMat=async function(){
+  const host=$("matInnhold"); if(!host) return;
+  host.innerHTML=`<div class="loading-sm"><span class="spinner sp-dark"></span> Henter tallene …</div>`;
+  const res=await statHentUker(true);
+  if(res.feil){ statTom(host,"🍽",escapeHtml(res.feil)); return; }
+  const alle=[]; res.rader.forEach(m=>statPlan(m.recipe_ids).forEach(r=>alle.push(r)));
+  if(!alle.length){ statTom(host,"🍽",STAT_TOM_TEKST); return; }
+
+  const antallPer={}, kjokken={}, diett={Vegansk:0,Vegetar:0,"Med kjøtt eller fisk":0};
+  let tidSum=0, tidAnt=0;
+  alle.forEach(r=>{
+    antallPer[r.id]=(antallPer[r.id]||0)+1;
+    if(r.kjokken) kjokken[r.kjokken]=(kjokken[r.kjokken]||0)+1;
+    if(r.vegan) diett.Vegansk++; else if(r.veg) diett.Vegetar++; else diett["Med kjøtt eller fisk"]++;
+    if(r.tid){ tidSum+=r.tid; tidAnt++; }
+  });
+  const unike=Object.keys(antallPer).length;
+  const kjTopp=Object.entries(kjokken).sort((a,b)=>b[1]-a[1]);
+  const topp=Object.entries(antallPer).sort((a,b)=>b[1]-a[1]).slice(0,6)
+    .map(([id,n])=>({r:RECIPES.find(x=>x.id===id),n})).filter(x=>x.r);
+
+  let html=statKpiStripe([
+    {tall:alle.length,label:"Middager laget"},
+    {tall:unike,label:"Ulike retter prøvd"},
+    {tall:tidAnt?tidSum/tidAnt:0,suffiks:"min",label:"Snitt tid per rett"},
+    {tall:kjTopp.length,label:"Kjøkken utforsket"}
+  ]);
+  html+=`<div class="stat-block"><h3>Mest brukte retter</h3>
+    ${topp.map(t=>statBar(t.r.navn,t.n,topp[0].n,"× "+t.n)).join("")}
+  </div>`;
+  if(kjTopp.length) html+=`<div class="stat-block"><h3>Kjøkken</h3>${statRing(kjTopp.map(([navn,verdi])=>({navn,verdi})))}</div>`;
+  const dSeg=Object.entries(diett).filter(([,v])=>v>0).map(([navn,verdi])=>({navn,verdi}));
+  if(dSeg.length) html+=`<div class="stat-block"><h3>Diett-fordeling</h3>${statRing(dSeg)}</div>`;
+  host.innerHTML=html; statTellOpp(host);
+};
+
+/* --- Ernæring --- */
+window.MM_renderErnaring=async function(){
+  const host=$("ernInnhold"); if(!host) return;
+  host.innerHTML=`<div class="loading-sm"><span class="spinner sp-dark"></span> Henter tallene …</div>`;
+  const res=await statHentUker(true);
+  if(res.feil){ statTom(host,"🥗",escapeHtml(res.feil)); return; }
+  const alle=[]; res.rader.forEach(m=>statPlan(m.recipe_ids).forEach(r=>alle.push(r)));
+  if(!alle.length){ statTom(host,"🥗",STAT_TOM_TEKST); return; }
+
+  let kcal=0,p=0,k=0,f=0;
+  alle.forEach(r=>{ const s=STATS[r.id]; if(s){ kcal+=s.kcal; p+=s.p; k+=s.k; f+=s.f; } });
+  const n=alle.length;
+  const proteinTopp=[...new Map(alle.map(r=>[r.id,r])).values()]
+    .map(r=>({r,pr:(STATS[r.id]||{}).p||0})).sort((a,b)=>b.pr-a.pr).slice(0,5);
+
+  let html=statKpiStripe([
+    {tall:kcal/n,suffiks:"kcal",label:"Snitt per porsjon"},
+    {tall:p/n,suffiks:"g",label:"Protein i snitt"},
+    {tall:k/n,suffiks:"g",label:"Karbo i snitt"},
+    {tall:f/n,suffiks:"g",label:"Fett i snitt"}
+  ]);
+  html+=`<div class="stat-block"><h3>Hvor kaloriene kommer fra</h3>
+    ${statRing([{navn:"Protein",verdi:p*4},{navn:"Karbohydrater",verdi:k*4},{navn:"Fett",verdi:f*9}])}
+  </div>`;
+  html+=`<div class="stat-block"><h3>Mest proteinrike retter du har laget</h3>
+    ${proteinTopp.map(t=>statBar(t.r.navn,t.pr,proteinTopp[0].pr||1,fmt(t.pr)+" g")).join("")}
+  </div>`;
+  host.innerHTML=html; statTellOpp(host);
+};
+
+/* --- Aktivitet --- */
+window.MM_renderAktivitet=async function(){
+  const host=$("aktInnhold"); if(!host) return;
+  host.innerHTML=`<div class="loading-sm"><span class="spinner sp-dark"></span> Henter tallene …</div>`;
+  const res=await statHentUker(false);
+  if(res.feil){ statTom(host,"📅",escapeHtml(res.feil)); return; }
+  const rader=res.rader;
+  if(!rader.length){ statTom(host,"📅","Ingen lagrede uker ennå. Lag en meny og trykk «Lagre meny» — så starter historien her."); return; }
+
+  const brukte=rader.filter(m=>m.brukt);
+  const status={aktiv:0,planlagt:0,arkivert:0};
+  rader.forEach(m=>{ status[m.status==="aktiv"?"aktiv":m.status==="planlagt"?"planlagt":"arkivert"]++; });
+  let mid=0,por=0;
+  brukte.forEach(m=>{ const plan=statPlan(m.recipe_ids); mid+=plan.length; por+=plan.length*Math.max(1,Number(m.meta&&m.meta.persons)||2); });
+  const perMnd={};
+  brukte.forEach(m=>{ const d=new Date(m.created_at); if(!isNaN(d)){ const nk=MND_KORT[d.getMonth()]+" "+String(d.getFullYear()).slice(2); perMnd[nk]=(perMnd[nk]||0)+1; } });
+  const mndListe=Object.entries(perMnd);
+
+  let html=statKpiStripe([
+    {tall:rader.length,label:"Uker lagret totalt"},
+    {tall:brukte.length,label:"Uker brukt"},
+    {tall:mid,label:"Middager laget"},
+    {tall:por,label:"Porsjoner servert"}
+  ]);
+  html+=`<div class="stat-block"><h3>Ukene dine nå</h3>
+    ${statBar("Aktiv",status.aktiv,Math.max(status.aktiv,status.planlagt,status.arkivert,1),String(status.aktiv))}
+    ${statBar("Planlagt",status.planlagt,Math.max(status.aktiv,status.planlagt,status.arkivert,1),String(status.planlagt))}
+    ${statBar("Arkivert",status.arkivert,Math.max(status.aktiv,status.planlagt,status.arkivert,1),String(status.arkivert))}
+  </div>`;
+  if(mndListe.length){
+    const maks=Math.max(...mndListe.map(([,v])=>v),1);
+    html+=`<div class="stat-block"><h3>Uker brukt per måned</h3>${mndListe.map(([lab,v])=>statBar(lab,v,maks,String(v))).join("")}</div>`;
+  }
+  host.innerHTML=html; statTellOpp(host);
+};
+
 /* ---------- MINE UKER ---------- */
 let mmCurrentWeekId=null; // samme økt + samme plan => oppdater raden i stedet for å lage duplikat
 window.MM_resetWeekSession=()=>{ mmCurrentWeekId=null; window.MM_editingWeek=false; window.MM_editingWeekName=null; };
