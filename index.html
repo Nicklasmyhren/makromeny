@@ -1219,6 +1219,33 @@ window.MM_shopBrukt=function(ids,persons){
   return shop.brukt||{};
 };
 
+// Laster en lagret uke inn på arbeidsflaten for redigering. Diett/allergier gjenopprettes
+// fra ukas meta, så «Bytt rett» respekterer de samme reglene som da uka ble laget.
+window.MM_loadWeekForEdit=function(ids,meta,navn){
+  const plan=(ids||[]).map(id=>RECIPES.find(r=>r.id===id)).filter(Boolean);
+  if(!plan.length) return false;
+  meta=meta||{};
+  state.dinners=Math.min(7,Math.max(3,plan.length));
+  state.persons=Math.min(6,Math.max(1,Number(meta.persons)||state.persons));
+  const dv=document.getElementById("dinnersVal"); if(dv) dv.textContent=state.dinners;
+  const pv=document.getElementById("personsVal"); if(pv) pv.textContent=state.persons;
+  const g=GOAL_TARGET[state.goal];
+  state.current={
+    plan,
+    goal:state.goal, pref:state.pref,
+    dietMode:meta.dietMode||null,
+    avoid:Array.isArray(meta.avoid)?meta.avoid:[],
+    vegOnly:false, veganOnly:false,
+    daily:{kcal:g.kcal,p:g.p,k:g.k,f:g.f},
+    note:null, warn:null, advarsler:{}, constraints:{pinned:[],tagMin:[]},
+    source:"lagret"
+  };
+  window.MM_editingWeek=true;
+  window.MM_editingWeekName=(navn||"").trim()||null;
+  render();
+  return true;
+};
+
 function showLoading(){
   const el=document.getElementById("results");
   el.innerHTML=`<div class="loading"><span class="spinner"></span> Claude leser hverdagen din og setter målene…</div>`;
@@ -1310,7 +1337,9 @@ function render(){
 
   const useBar=document.createElement("div");useBar.className="use-menu-bar anim";
   const trekkerFra = state.brukHarHjemme && Object.keys(shop.brukt||{}).length>0;
-  const useHint = "Lagrer uka i «Mine uker», der den ligger trygt til du skal handle og lage maten — også om du lukker siden.";
+  const useHint = window.MM_editingWeek
+    ? `Du redigerer ${window.MM_editingWeekName?"«"+escapeHtml(window.MM_editingWeekName)+"»":"en lagret uke"} — «Lagre meny» oppdaterer den lagrede uka.`
+    : "Lagrer uka i «Mine uker», der den ligger trygt til du skal handle og lage maten — også om du lukker siden.";
   useBar.innerHTML=`<button class="use-menu" id="useMenuBtn">Lagre meny</button><span class="use-menu-hint">${useHint}</span>`;
   el.appendChild(useBar);
 
@@ -1321,7 +1350,7 @@ function render(){
     umb.disabled=true; umb.textContent="Lagrer …";
     const res = window.MM_saveWeek ? await window.MM_saveWeek(ids,meta) : {ok:false};
     if(res&&res.ok){
-      umb.textContent = res.status==="aktiv" ? "✓ Lagret som aktiv uke" : "✓ Lagret som planlagt uke";
+      umb.textContent = res.status==="aktiv" ? "✓ Lagret som aktiv uke" : res.status==="planlagt" ? "✓ Lagret som planlagt uke" : "✓ Uka er oppdatert";
     }
     else if(res&&res.reason==="login"){ umb.textContent="Lagre meny"; umb.disabled=false; }
     else { umb.textContent="Kunne ikke lagre — prøv igjen"; setTimeout(()=>{umb.textContent="Lagre meny";umb.disabled=false;},1800); }
@@ -1931,7 +1960,8 @@ async function loadRecent(user){
 }
 /* ---------- MINE UKER ---------- */
 let mmCurrentWeekId=null; // samme økt + samme plan => oppdater raden i stedet for å lage duplikat
-window.MM_resetWeekSession=()=>{ mmCurrentWeekId=null; };
+window.MM_resetWeekSession=()=>{ mmCurrentWeekId=null; window.MM_editingWeek=false; window.MM_editingWeekName=null; };
+window.MM_setEditingWeek=(id)=>{ mmCurrentWeekId=id; };
 
 window.MM_saveWeek=async(ids,meta)=>{
   if(!supabase) return {ok:false,reason:"unavailable"};
@@ -2081,18 +2111,20 @@ window.MM_renderWeeks=async function(){
   if(!akt.length) cA.innerHTML=`<div class="wk-empty">Ingen aktiv uke. Lagre en meny fra «Lag ukesmeny», eller flytt en hit fra planlagte/arkivet.</div>`;
   akt.forEach(m=>{
     const bruk=m.brukt?"":`<button class="auth-btn" data-wk="bruk" data-id="${m.id}" title="Registrerer uka som brukt, så neste meny varierer rettene — og trekker fra beholdningen hvis den var i bruk.">Bruk denne menyen</button>`;
-    const el=wkCard(m,`${bruk}<button class="swap" data-wk="arkiver" data-id="${m.id}">Legg i arkiv</button>`);
+    const el=wkCard(m,`${bruk}<button class="swap" data-wk="rediger" data-id="${m.id}">Rediger</button><button class="swap" data-wk="arkiver" data-id="${m.id}">Legg i arkiv</button>`);
     cA.appendChild(el);
   });
   if(!plan.length) cP.innerHTML=`<div class="wk-empty">Ingen planlagte uker ennå.</div>`;
   plan.forEach(m=>{
     const el=wkCard(m,`<button class="swap" data-wk="aktiver" data-id="${m.id}">Sett som aktiv</button>
+      <button class="swap" data-wk="rediger" data-id="${m.id}">Rediger</button>
       <button class="swap" data-wk="arkiver" data-id="${m.id}">Legg i arkiv</button>`);
     cP.appendChild(el);
   });
   if(!ark.length) cR.innerHTML=`<div class="wk-empty">Arkivet er tomt.</div>`;
   ark.forEach(m=>{
     const el=wkCard(m,`<button class="swap" data-wk="aktiver" data-id="${m.id}">Tilbake til aktiv</button>
+      <button class="swap" data-wk="rediger" data-id="${m.id}">Rediger</button>
       <button class="swap" data-wk="slett" data-id="${m.id}">Slett permanent</button>`);
     cR.appendChild(el);
   });
@@ -2106,6 +2138,14 @@ window.MM_renderWeeks=async function(){
     const id=b.dataset.id, act=b.dataset.wk;
     const m=document.getElementById("wkMsg-"+id);
     const setM=(t,txt)=>{ if(m){ m.className="auth-msg "+t; m.textContent=txt; } };
+    if(act==="rediger"){
+      const row=rowsById[id]; if(!row) return;
+      const ok=window.MM_loadWeekForEdit && window.MM_loadWeekForEdit(row.recipe_ids, row.meta, row.navn);
+      if(!ok){ setM("err","Rettene i denne uka finnes ikke lenger i databasen — den kan ikke redigeres."); return; }
+      mmCurrentWeekId=row.id;
+      if(window.MM_goto) window.MM_goto("plan");
+      return;
+    }
     if(act==="bruk"){
       const row=rowsById[id]; if(!row) return;
       b.disabled=true; b.textContent="Registrerer …";
