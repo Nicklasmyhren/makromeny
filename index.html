@@ -836,7 +836,8 @@ function recipeStats(r){
   return {kcal:s.kcal/BASE_SERV,p:s.p/BASE_SERV,k:s.k/BASE_SERV,f:s.f/BASE_SERV,cost:s.cost/BASE_SERV};
 }
 // Animalske råvarer (kjøtt, fisk, meieri, egg) — grunnlag for vegan- og senere allergifiltre.
-const ANIMALSK=new Set(["kyllingfilet","kjottdeig","svinekotelett","kyllinglar","laksefilet","torskefilet","egg","romme","revetOst","melk","smor"]);
+const ANIMALSK=new Set(["kyllingfilet","kjottdeig","svinekotelett","kyllinglar","laksefilet","torskefilet","egg","romme","revetOst","melk","smor",
+  "bacon","kremflote","parmesan","fiskekaker","wienerpolse","reker","fetaost","greskYoghurt","eggnudler","naan","pesto","honning"]);
 // En rett er vegansk hvis ingen av råvarene er animalske.
 RECIPES.forEach(r=>{ r.vegan = r.ing.every(([id])=> !ANIMALSK.has(id)); });
 
