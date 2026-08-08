@@ -740,23 +740,23 @@
 <script>
 /* ---------- DATA (eksempeldata / dummy) ---------- */
 let ING = {
-  kyllingfilet:{n:"Kyllingfilet",kat:"Kjøtt",kcal:106,p:22,k:0,f:1.8,pg:600,pris:75,pk:"600 g"},
-  kjottdeig:{n:"Kjøttdeig 14%",kat:"Kjøtt",kcal:211,p:18.6,k:0,f:14,pg:400,pris:45,pk:"400 g"},
-  svinekotelett:{n:"Svinekotelett",kat:"Kjøtt",kcal:172,p:21,k:0,f:9,pg:600,pris:70,pk:"600 g"},
-  kyllinglar:{n:"Kyllinglår",kat:"Kjøtt",kcal:161,p:18,k:0,f:9.5,pg:1000,pris:60,pk:"1 kg"},
-  laksefilet:{n:"Laksefilet",kat:"Fisk",kcal:208,p:20,k:0,f:13,pg:500,pris:95,pk:"500 g"},
-  torskefilet:{n:"Torskefilet lettsaltet",kat:"Fisk",kcal:75,p:18.1,k:0,f:0.3,pg:570,pris:85.44,pk:"570 g"},
+  kyllingfilet:{n:"Kyllingfilet",kat:"Kjøtt",kcal:106,p:22,k:0,f:1.8,pg:600,pris:75,pk:"600 g",los:true},
+  kjottdeig:{n:"Kjøttdeig 14%",kat:"Kjøtt",kcal:211,p:18.6,k:0,f:14,pg:400,pris:45,pk:"400 g",los:true},
+  svinekotelett:{n:"Svinekotelett",kat:"Kjøtt",kcal:172,p:21,k:0,f:9,pg:600,pris:70,pk:"600 g",los:true},
+  kyllinglar:{n:"Kyllinglår",kat:"Kjøtt",kcal:161,p:18,k:0,f:9.5,pg:1000,pris:60,pk:"1 kg",los:true},
+  laksefilet:{n:"Laksefilet",kat:"Fisk",kcal:208,p:20,k:0,f:13,pg:500,pris:95,pk:"500 g",los:true},
+  torskefilet:{n:"Torskefilet lettsaltet",kat:"Fisk",kcal:75,p:18.1,k:0,f:0.3,pg:570,pris:85.44,pk:"570 g",los:true},
   ris:{n:"Jasminris",kat:"Tørrvarer",kcal:360,p:7,k:79,f:0.6,pg:1000,pris:32,pk:"1 kg"},
   pasta:{n:"Pasta",kat:"Tørrvarer",kcal:359,p:12,k:72,f:1.5,pg:500,pris:19,pk:"500 g"},
-  poteter:{n:"Poteter",kat:"Frukt & grønt",kcal:75,p:2,k:16,f:0.1,pg:2000,pris:35,pk:"2 kg"},
+  poteter:{n:"Poteter",kat:"Frukt & grønt",kcal:75,p:2,k:16,f:0.1,pg:2000,pris:35,pk:"2 kg",los:true},
   egg:{n:"Egg frittgående 12 stk",kat:"Meieri & egg",kcal:149,p:13,k:0.3,f:10.6,pg:700,pris:65.9,pk:"12 stk"},
   olivenolje:{n:"Olivenolje",kat:"Tørrvarer",kcal:884,p:0,k:0,f:100,pg:500,pris:55,pk:"500 ml"},
-  lok:{n:"Løk gul",kat:"Frukt & grønt",kcal:32,p:1.1,k:5.7,f:0.1,pg:1000,pris:29.9,pk:"1 kg"},
-  hvitlok:{n:"Hvitløk",kat:"Frukt & grønt",kcal:149,p:6,k:30,f:0.5,pg:150,pris:18,pk:"150 g"},
-  paprika:{n:"Paprika rød",kat:"Frukt & grønt",kcal:26,p:0.8,k:4.2,f:0.2,pg:180,pris:14.38,pk:"180 g"},
-  gulrot:{n:"Gulrot",kat:"Frukt & grønt",kcal:41,p:0.9,k:9,f:0.2,pg:1000,pris:20,pk:"1 kg"},
-  brokkoli:{n:"Brokkoli",kat:"Frukt & grønt",kcal:28,p:3.2,k:1.9,f:0.3,pg:350,pris:21.9,pk:"1 stk"},
-  squash:{n:"Squash",kat:"Frukt & grønt",kcal:17,p:1.2,k:3,f:0.3,pg:300,pris:22,pk:"1 stk"},
+  lok:{n:"Løk gul",kat:"Frukt & grønt",kcal:32,p:1.1,k:5.7,f:0.1,pg:1000,pris:29.9,pk:"1 kg",los:true},
+  hvitlok:{n:"Hvitløk",kat:"Frukt & grønt",kcal:149,p:6,k:30,f:0.5,pg:150,pris:18,pk:"150 g",los:true},
+  paprika:{n:"Paprika rød",kat:"Frukt & grønt",kcal:26,p:0.8,k:4.2,f:0.2,pg:180,pris:14.38,pk:"180 g",los:true},
+  gulrot:{n:"Gulrot",kat:"Frukt & grønt",kcal:41,p:0.9,k:9,f:0.2,pg:1000,pris:20,pk:"1 kg",los:true},
+  brokkoli:{n:"Brokkoli",kat:"Frukt & grønt",kcal:28,p:3.2,k:1.9,f:0.3,pg:350,pris:21.9,pk:"1 stk",los:true},
+  squash:{n:"Squash",kat:"Frukt & grønt",kcal:17,p:1.2,k:3,f:0.3,pg:300,pris:22,pk:"1 stk",los:true},
   knusteTomater:{n:"Finhakkede tomater",kat:"Hermetikk",kcal:30,p:1.6,k:5,f:0.2,pg:400,pris:23.6,pk:"400 g"},
   tortilla:{n:"Tortillalefser",kat:"Bakevarer",kcal:310,p:8,k:50,f:7,pg:320,pris:12.9,pk:"8 stk"},
   romme:{n:"Lettrømme Tine",kat:"Meieri & egg",kcal:179,p:2.8,k:3.7,f:17,pg:300,pris:24.9,pk:"300 g"},
@@ -766,7 +766,7 @@ let ING = {
   kikerter:{n:"Kikerter",kat:"Hermetikk",kcal:119,p:7,k:16,f:2,pg:380,pris:16,pk:"380 g"},
   kokosmelk:{n:"Kokosmelk",kat:"Hermetikk",kcal:180,p:1.6,k:3,f:18,pg:400,pris:22,pk:"400 ml"},
   salat:{n:"Salatmix",kat:"Frukt & grønt",kcal:15,p:1.4,k:2,f:0.2,pg:175,pris:25,pk:"1 pose"},
-  cherrytomat:{n:"Cherrytomater",kat:"Frukt & grønt",kcal:23,p:1.4,k:3.2,f:0.2,pg:250,pris:40.5,pk:"250 g"},
+  cherrytomat:{n:"Cherrytomater",kat:"Frukt & grønt",kcal:23,p:1.4,k:3.2,f:0.2,pg:250,pris:40.5,pk:"250 g",los:true},
   melk:{n:"Lettmelk 1%",kat:"Meieri & egg",kcal:40,p:3.4,k:4.4,f:1,pg:1000,pris:20.5,pk:"1 l"},
   smor:{n:"Meierismør Tine",kat:"Meieri & egg",kcal:742,p:0.5,k:0.5,f:82,pg:500,pris:72.9,pk:"500 g"},
   tofu:{n:"Tofu Naturell",kat:"Plantebasert",kcal:161,p:17,k:1.8,f:9.3,pg:200,pris:33.8,pk:"200 g"},
@@ -962,7 +962,7 @@ window.mmApplyData=function(ingRader,rettRader,koblinger){
   const nyING={};
   ingRader.forEach(r=>{
     nyING[r.id]={n:r.navn,kat:r.kategori,kcal:Number(r.kcal),p:Number(r.protein),k:Number(r.karbo),
-                 f:Number(r.fett),pg:Number(r.pakke_gram),pris:Number(r.pris),pk:r.pakke_tekst};
+                 f:Number(r.fett),pg:Number(r.pakke_gram),pris:Number(r.pris),pk:r.pakke_tekst,los:!!r.losvekt};
   });
   const nyAll={gluten:new Set(),melk:new Set(),egg:new Set(),fisk:new Set(),soya:new Set(),
                "nøtter":new Set(),skalldyr:new Set(),sesam:new Set(),selleri:new Set()};
@@ -1203,6 +1203,14 @@ async function buildPlan(state){
 }
 
 /* ---------- HANDLELISTE ---------- */
+// Hybrid: løsvarer (grønnsaker, kjøtt, fisk) prises eksakt etter gram — du kjøper det du trenger.
+// Faste pakker (bokser, poser, kartonger) rundes opp til hele pakker — de kan ikke deles.
+// Løser over-kjøp-problemet (350 g løk skal ikke bli «1 kg»). Nicklas' og pappas løsning.
+function pentGram(g){
+  const r=Math.round(g);
+  if(r>=1000){ const kg=r/1000; return (kg%1===0?kg:kg.toFixed(1).replace(".",","))+" kg"; }
+  return r+" g";
+}
 function buildShopping(plan,persons){
   const factor=persons/BASE_SERV,grams={};
   plan.forEach(r=>r.ing.forEach(([id,g])=>{grams[id]=(grams[id]||0)+g*factor;}));
@@ -1211,20 +1219,26 @@ function buildShopping(plan,persons){
   const ids=Object.keys(grams).sort((a,b)=>ING[a].kat.localeCompare(ING[b].kat)||ING[a].n.localeCompare(ING[b].n));
   for(const id of ids){
     const it=ING[id], need=grams[id];
+    const los=!!it.los, perGram=it.pris/it.pg;
     const har = bruk ? Math.min(harHjemme[id]||0, need) : 0;   // felles lager for hele uka
     if(har>0) brukt[id]=har;
     const rest = Math.max(0, need-har);
-    const utenHjemme = Math.max(1,Math.ceil(need/it.pg))*it.pris;
+    const utenHjemme = los ? need*perGram : Math.max(1,Math.ceil(need/it.pg))*it.pris;
     if(rest<=0){                                   // du har nok — ingen kjøp
       dekket.push({navn:it.n, brukt:har});
       spart += utenHjemme;
       continue;
     }
-    const packs=Math.max(1,Math.ceil(rest/it.pg)), cost=packs*it.pris;
-    const packsUten=Math.max(1,Math.ceil(need/it.pg));
+    let packs,cost,mengde;
+    if(los){
+      packs=1; cost=rest*perGram; mengde=pentGram(rest);       // betal for det du faktisk trenger
+    }else{
+      packs=Math.max(1,Math.ceil(rest/it.pg)); cost=packs*it.pris; mengde=null;
+    }
+    const packsUten=los?1:Math.max(1,Math.ceil(need/it.pg));
     total+=cost;
     if(har>0) spart += Math.max(0, utenHjemme-cost);
-    lines.push({navn:it.n,packs,pk:it.pk,cost,fraHjemme:(har>0&&packs<packsUten)?har:0});
+    lines.push({navn:it.n,packs,pk:it.pk,cost,los,mengde,fraHjemme:(har>0&&(los||packs<packsUten))?har:0});
   }
   return {lines,total,dekket,spart,brukt};
 }
@@ -1287,7 +1301,7 @@ window.MM_buildWeekHTML=function(ids,persons,uid){
   const prev=state.brukHarHjemme; state.brukHarHjemme=false;
   const shop=buildShopping(plan,p);
   state.brukHarHjemme=prev;
-  const rows=shop.lines.map(l=>`<div class="r-line"><span class="r-name">${l.navn}${l.packs>1?` <small>${l.packs} × ${l.pk}</small>`:` <small>${l.pk}</small>`}</span><span class="r-lead"></span><span class="r-price">${fmt(l.cost)} kr</span></div>`).join("");
+  const rows=shop.lines.map(l=>`<div class="r-line"><span class="r-name">${l.navn}${l.los?` <small>${l.mengde}</small>`:(l.packs>1?` <small>${l.packs} × ${l.pk}</small>`:` <small>${l.pk}</small>`)}</span><span class="r-lead"></span><span class="r-price">${fmt(l.cost)} kr</span></div>`).join("");
   return `${missing>0?`<div class="wk-empty" style="margin-bottom:12px;">${missing} rett${missing>1?"er":""} fra denne uka finnes ikke lenger i databasen og vises ikke.</div>`:""}
     <div class="wk-meals">${meals}</div>
     <div class="section-h" style="margin-top:18px;"><h2>Handleliste</h2><span class="meta">${shop.lines.length} varer · ${p} pers</span></div>
@@ -1446,7 +1460,7 @@ function render(){
   const sh2=document.createElement("div");sh2.className="section-h anim";
   sh2.innerHTML=`<h2>Handleliste</h2><span class="meta">${shop.lines.length} varer</span>`;el.appendChild(sh2);
   const rec=document.createElement("div");rec.className="receipt anim";
-  const rows=shop.lines.map(l=>`<div class="r-line"><span class="r-name">${l.navn}${l.fraHjemme?" <em>(delvis hjemme)</em>":""}${l.packs>1?` <small>${l.packs} × ${l.pk}</small>`:` <small>${l.pk}</small>`}</span><span class="r-lead"></span><span class="r-price">${fmt(l.cost)} kr</span></div>`).join("");
+  const rows=shop.lines.map(l=>`<div class="r-line"><span class="r-name">${l.navn}${l.fraHjemme?" <em>(delvis hjemme)</em>":""}${l.los?` <small>${l.mengde}</small>`:(l.packs>1?` <small>${l.packs} × ${l.pk}</small>`:` <small>${l.pk}</small>`)}</span><span class="r-lead"></span><span class="r-price">${fmt(l.cost)} kr</span></div>`).join("");
   rec.innerHTML=`<div class="r-head"><div class="store">Vekes</div><div class="sub">Handleliste · veiledende priser</div></div>
     ${rows}<div class="r-total"><span class="t-lab">TOTALT</span><span class="t-val num">${fmt(shop.total)} kr</span></div>
     ${(shop.dekket&&shop.dekket.length)?`<div class="r-hjemme"><div class="r-hjemme-lab">Har du hjemme — ikke handle</div>${shop.dekket.map(d=>`<div class="r-hjemme-linje">✓ ${d.navn}</div>`).join("")}</div>`:""}
