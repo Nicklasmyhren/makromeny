@@ -1,0 +1,2611 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vekes — spis variert, planlegg enkelt, spar penger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14241c;--spruce:#1e4d3a;--spruce-2:#2e6b50;--paper:#f1f3ee;--card:#ffffff;
+    --kroner:#b4632a;--line:#dde1d8;--muted:#6b7a70;--karbo:#c9a24b;--fett:#b08368;
+    --radius:14px;--shadow:0 1px 2px rgba(20,36,28,.05), 0 8px 24px rgba(20,36,28,.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px;}
+
+  header.top{padding:26px 0 18px;}
+  .brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+  .brand h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:30px;letter-spacing:-.02em;margin:0;color:var(--spruce);}
+  .brand h1 b{color:var(--kroner);}
+  .brand .tag{color:var(--muted);font-size:14px;}
+  .brand .ai-badge{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+    background:var(--spruce);color:#fff;border-radius:999px;padding:3px 9px;}
+  .topnote{margin-top:10px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;}
+  .topnote b{color:var(--spruce-2);font-weight:600;}
+
+  .grid{display:grid;grid-template-columns:380px 1fr;gap:22px;align-items:start;padding-bottom:60px;}
+  @media (max-width:920px){ .grid{grid-template-columns:1fr;} }
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;}
+  .panel.sticky{position:sticky;top:18px;}
+  @media (max-width:920px){ .panel.sticky{position:static;} }
+
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;}
+  .field{margin-bottom:18px;}
+  .field > label{display:block;font-size:13px;font-weight:600;margin-bottom:8px;}
+
+  .seg{display:flex;gap:6px;flex-wrap:wrap;}
+  .seg button{flex:1 1 auto;min-width:fit-content;cursor:pointer;border:1px solid var(--line);background:#fbfcfa;color:var(--ink);
+    border-radius:9px;padding:9px 10px;font:inherit;font-size:13px;font-weight:500;transition:border-color .15s,background .15s,color .15s;}
+  .seg button:hover{border-color:var(--spruce-2);}
+  .seg button.is-active{background:var(--spruce);border-color:var(--spruce);color:#fff;}
+  .seg.compact button{flex:1 1 0;text-align:center;}
+
+  .stepper{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:9px;overflow:hidden;}
+  .stepper button{width:42px;border:none;background:#fbfcfa;cursor:pointer;font-size:20px;color:var(--spruce);transition:background .15s;}
+  .stepper button:hover{background:#eef2ec;}
+  .stepper .val{min-width:54px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:16px;border-left:1px solid var(--line);border-right:1px solid var(--line);}
+  .stepper-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .stepper-row .hint{font-size:12px;color:var(--muted);}
+
+  textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:#fbfcfa;padding:11px 12px;font:inherit;font-size:13.5px;resize:vertical;min-height:78px;color:var(--ink);}
+  textarea:focus,.seg button:focus-visible,.stepper button:focus-visible,.cta:focus-visible,.swap:focus-visible{outline:2px solid var(--spruce-2);outline-offset:2px;}
+  .ai-hint{font-size:11.5px;color:var(--muted);margin-top:6px;}
+  .ai-hint b{color:var(--spruce-2);font-weight:600;}
+
+  .cta{width:100%;margin-top:4px;cursor:pointer;border:none;border-radius:11px;background:var(--spruce);color:#fff;font:inherit;font-weight:600;font-size:15px;padding:14px;transition:background .15s,transform .05s;display:flex;align-items:center;justify-content:center;gap:9px;}
+  .cta:hover{background:#173d2e;}
+  .cta:active{transform:translateY(1px);}
+  .cta[disabled]{opacity:.75;cursor:default;}
+  .cta:active{transform:translateY(1px);}
+
+  .spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .results{display:flex;flex-direction:column;gap:18px;}
+  .anim{animation:rise .4s ease both;}
+  @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+  .loading{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);font-size:14px;color:var(--spruce-2);font-weight:500;}
+  .loading .spinner{border-color:rgba(46,107,80,.25);border-top-color:var(--spruce-2);}
+
+  .ai-read{background:#f4f8f3;border:1px solid #d7e6d6;border-radius:12px;padding:14px 16px;}
+  .ai-read.fallback{background:#fbf6ee;border-color:#ecdcc4;}
+  .ai-read .lab{display:flex;align-items:center;gap:7px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--spruce-2);margin-bottom:8px;}
+  .ai-read.fallback .lab{color:var(--kroner);}
+  .ai-read .lab .dot{width:7px;height:7px;border-radius:50%;background:var(--spruce-2);}
+  .ai-read.fallback .lab .dot{background:var(--kroner);}
+  .ai-read .note{font-size:13.5px;color:var(--ink);margin-bottom:10px;}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;}
+  .chip{font-size:12px;background:#fff;border:1px solid #cfe1ce;color:var(--spruce);border-radius:999px;padding:4px 11px;font-weight:500;font-family:'IBM Plex Mono',monospace;}
+  .ai-read.fallback .chip{border-color:#ecdcc4;color:var(--kroner);}
+
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  @media (max-width:560px){ .tiles{grid-template-columns:repeat(2,1fr);} }
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow);}
+  .tile .k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;}
+  .tile .v{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:25px;letter-spacing:-.02em;margin-top:4px;line-height:1;}
+  .tile .u{font-size:12px;color:var(--muted);margin-top:3px;}
+  .tile.kr .v{color:var(--kroner);}
+
+  .target{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow);}
+  .target h3{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;margin:0 0 4px;font-weight:700;}
+  .target .sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
+  .bar{margin-bottom:11px;}
+  .bar:last-child{margin-bottom:0;}
+  .bar .row{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;}
+  .bar .row .name{font-weight:600;}
+  .bar .row .val{font-family:'IBM Plex Mono',monospace;color:var(--muted);}
+  .bar .track{height:7px;border-radius:4px;background:#eef1ec;position:relative;overflow:hidden;}
+  .bar .fill{height:100%;border-radius:4px;}
+  .bar .target-mark{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);opacity:.55;}
+
+  .week{display:flex;flex-direction:column;gap:12px;}
+  .section-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:2px 0 -2px;}
+  .section-h h2{font-family:'Bricolage Grotesque',sans-serif;font-size:19px;margin:0;font-weight:700;letter-spacing:-.01em;}
+  .section-h .meta{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+
+  .meal{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;}
+  .meal .day{flex:0 0 74px;background:var(--spruce);color:#fff;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:10px 6px;gap:2px;}
+  .meal .day .d{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.8;}
+  .meal .day .n{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:700;line-height:1.1;}
+  .meal .body{flex:1;padding:13px 15px;min-width:0;}
+  .meal .body .title{font-weight:600;font-size:15.5px;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .meal .body .title .tagdot{font-size:10.5px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;}
+  .macros{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;}
+  .macro{display:flex;flex-direction:column;}
+  .macro .m-v{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;line-height:1;}
+  .macro .m-k{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:3px;}
+  .macro.p .m-v{color:var(--spruce-2);}
+  .macro.k .m-v{color:var(--karbo);}
+  .macro.f .m-v{color:var(--fett);}
+  .ingredients{font-size:12.5px;color:var(--muted);line-height:1.45;}
+  .meal .foot{margin-top:9px;display:flex;gap:8px;flex-wrap:wrap;}
+  .recipe-btn{cursor:pointer;background:var(--spruce);border:1px solid var(--spruce);border-radius:8px;font:inherit;font-size:12px;font-weight:600;color:#fff;padding:5px 11px;transition:background .15s;}
+  .recipe-btn:hover{background:#173d2e;}
+  .recipe-btn[disabled]{opacity:.7;cursor:default;}
+  .recipe-inner{margin-top:11px;border-top:1px dashed var(--line);padding-top:12px;}
+  .recipe-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;}
+  .rp-lab{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--spruce-2);}
+  .rp-time{font-size:12px;color:var(--muted);}
+  .rp-sub{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:6px;}
+  .recipe-ing{margin:0 0 13px;padding-left:18px;}
+  .recipe-ing li{margin-bottom:2px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink);}
+  .recipe-steps{margin:0;padding-left:20px;font-size:13.5px;color:var(--ink);line-height:1.55;}
+  .recipe-steps li{margin-bottom:6px;padding-left:3px;}
+  .rp-foot{margin-top:11px;font-size:11px;color:var(--muted);font-style:italic;}
+  .rp-err{font-size:13px;color:var(--kroner);}
+  .loading-sm{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--spruce-2);}
+  .spinner.sp-dark{border-color:rgba(46,107,80,.25);border-top-color:var(--spruce-2);}
+  .swap{cursor:pointer;background:none;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12px;font-weight:500;color:var(--spruce);padding:5px 11px;transition:border-color .15s,background .15s;}
+  .swap:hover{border-color:var(--spruce-2);background:#f4f8f3;}
+
+  .receipt{position:relative;background:var(--card);border-radius:4px;padding:24px 22px 26px;max-width:440px;box-shadow:0 1px 2px rgba(20,36,28,.05),0 10px 30px rgba(20,36,28,.09);}
+  .receipt::before,.receipt::after{content:'';position:absolute;left:0;right:0;height:10px;background:radial-gradient(circle at 7px 50%, var(--paper) 0 4px, transparent 4.5px);background-size:14px 14px;background-repeat:repeat-x;}
+  .receipt::before{top:-1px;}
+  .receipt::after{bottom:-1px;transform:rotate(180deg);}
+  .receipt .r-head{text-align:center;border-bottom:1px dashed var(--line);padding-bottom:12px;margin-bottom:12px;}
+  .receipt .r-head .store{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:16px;letter-spacing:.02em;}
+  .receipt .r-head .sub{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);letter-spacing:.05em;margin-top:3px;}
+  .r-line{display:flex;align-items:baseline;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:5px 0;}
+  .r-line .r-name{flex:1;min-width:0;}
+  .r-line .r-name small{display:block;font-size:10.5px;color:var(--muted);}
+  .r-line .r-lead{flex:0 0 12px;border-bottom:1px dotted var(--line);align-self:flex-end;height:9px;}
+  .r-line .r-price{font-weight:500;white-space:nowrap;}
+  .r-total{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--ink);margin-top:12px;padding-top:12px;font-family:'IBM Plex Mono',monospace;}
+  .r-total .t-lab{font-weight:600;font-size:14px;letter-spacing:.04em;}
+  .r-total .t-val{font-weight:600;font-size:22px;color:var(--kroner);}
+  .r-foot{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);text-align:center;margin-top:12px;border-top:1px dashed var(--line);padding-top:11px;}
+  .r-foot b{color:var(--spruce-2);}
+
+  footer{border-top:1px solid var(--line);padding:18px 0 40px;font-size:12px;color:var(--muted);}
+  footer b{color:var(--spruce-2);font-weight:600;}
+  footer .num{color:var(--ink);}
+
+  /* ---------- TOPPBAR + SIDER ---------- */
+  .topbar{position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px solid var(--line);}
+  .tb-wrap{max-width:1120px;margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:22px;min-height:62px;}
+  .tb-brand{text-decoration:none;display:flex;align-items:center;}
+  .tb-brand h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:24px;letter-spacing:-.03em;margin:0;color:var(--spruce);}
+  .tb-brand h1 b{color:var(--kroner);display:inline-block;transform:rotate(-6deg) translateY(1px);font-weight:800;margin-left:1px;}
+  .tb-nav{display:flex;gap:4px;flex:1;}
+  .tb-link{cursor:pointer;border:none;background:none;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:22px 12px 19px;border-bottom:3px solid transparent;transition:color .15s,border-color .15s;}
+  .tb-link:hover{color:var(--ink);}
+  .tb-link.is-here{color:var(--ink);border-bottom-color:var(--spruce-2);}
+  .tb-link[hidden]{display:none;}
+  .tb-right{display:flex;align-items:center;gap:10px;margin-left:auto;}
+  .tb-burger{display:none;cursor:pointer;border:1px solid var(--line);background:#fbfcfa;border-radius:8px;font-size:18px;line-height:1;padding:7px 11px;color:var(--spruce);}
+  @media (max-width:860px){
+    .tb-nav{position:absolute;top:62px;left:0;right:0;background:#fff;border-bottom:1px solid var(--line);flex-direction:column;gap:0;display:none;box-shadow:var(--shadow);}
+    .tb-nav.open{display:flex;}
+    .tb-link{padding:14px 20px;border-bottom:1px solid var(--line);border-left:3px solid transparent;text-align:left;}
+    .tb-link.is-here{border-bottom-color:var(--line);border-left-color:var(--spruce-2);}
+    .tb-burger{display:block;}
+  }
+  .page[hidden]{display:none;}
+
+  /* ---------- FORSIDE (hero) ---------- */
+  .hero{position:relative;overflow:hidden;padding:72px 20px 56px;text-align:center;}
+  .hero-blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.5;pointer-events:none;animation:drift 14s ease-in-out infinite alternate;}
+  .hero-blob.b1{width:340px;height:340px;background:#cfe1ce;top:-120px;left:-80px;}
+  .hero-blob.b2{width:300px;height:300px;background:#f0dcc3;bottom:-140px;right:-60px;animation-delay:-7s;}
+  @keyframes drift{from{transform:translate(0,0) scale(1);}to{transform:translate(40px,24px) scale(1.12);}}
+  .hero-inner{position:relative;max-width:760px;margin:0 auto;}
+  .hero h2{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(34px,6vw,60px);letter-spacing:-.03em;line-height:1.06;margin:0 0 18px;color:var(--spruce);opacity:0;animation:rise .6s ease .1s both;}
+  .hero h2 .rot{display:inline-block;min-width:6.4ch;text-align:center;background:var(--kroner);color:#fff;border-radius:10px;padding:.02em .18em .06em;transform:rotate(-2deg);box-shadow:0 4px 14px rgba(180,99,42,.28);}
+  .hero h2 .rot span{display:inline-block;animation:wordIn .45s ease both;}
+  @keyframes wordIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  .hero p.lead{font-size:16.5px;color:var(--muted);max-width:560px;margin:0 auto 28px;opacity:0;animation:rise .6s ease .25s both;}
+  .hero .cta{width:auto;display:inline-flex;padding:14px 30px;font-size:15.5px;opacity:0;animation:rise .6s ease .4s both;}
+  .hero-feats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:860px;margin:46px auto 0;padding:0 0 4px;}
+  @media (max-width:700px){ .hero-feats{grid-template-columns:1fr;max-width:420px;} }
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 18px;text-align:left;opacity:0;animation:rise .6s ease both;}
+  .feat:nth-child(1){animation-delay:.5s;} .feat:nth-child(2){animation-delay:.62s;} .feat:nth-child(3){animation-delay:.74s;}
+  .feat .fi{font-size:22px;margin-bottom:8px;}
+  .feat h3{font-family:'Bricolage Grotesque',sans-serif;font-size:15.5px;font-weight:700;margin:0 0 5px;}
+  .feat p{font-size:13px;color:var(--muted);margin:0;line-height:1.5;}
+
+  /* ---------- PLASSHOLDER-SIDER ---------- */
+  .page-plain{max-width:1120px;margin:0 auto;padding:36px 20px 60px;}
+  .page-plain h2{font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0 0 6px;color:var(--spruce);}
+  .page-plain .psub{font-size:13.5px;color:var(--muted);margin:0 0 22px;}
+  .soon{background:var(--card);border:1px dashed var(--line);border-radius:var(--radius);padding:44px 24px;text-align:center;color:var(--muted);font-size:14px;}
+  .soon .si{font-size:30px;margin-bottom:10px;}
+
+  /* ---------- ADMIN ---------- */
+  .adm-list{display:flex;flex-direction:column;gap:10px;}
+  .adm-row{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 16px;box-shadow:var(--shadow);}
+  .adm-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .adm-name{font-weight:600;font-size:14.5px;flex:1;min-width:180px;}
+  .adm-chip{font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--muted);white-space:nowrap;}
+  .adm-chip.ok{color:var(--spruce-2);border-color:#cfe1ce;background:#f4f8f3;}
+  .adm-steps{margin:10px 0 0;padding-left:20px;font-size:13.5px;line-height:1.55;}
+  .adm-steps li.mengde{background:#fbf6ee;border-radius:4px;padding:1px 4px;}
+  .adm-warnbox{margin-top:10px;background:#fbf6ee;border:1px solid #ecdcc4;border-radius:9px;padding:9px 12px;font-size:12.5px;color:var(--kroner);}
+  .adm-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+
+  /* ---------- MINE UKER ---------- */
+  .wk-group{margin-top:26px;}
+  .wk-head{font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:700;margin:0 0 10px;color:var(--spruce);}
+  .wk-name{font-weight:600;font-size:14.5px;flex:1;min-width:160px;}
+  .wk-dishes{margin:8px 0 0;font-size:13px;color:var(--muted);line-height:1.55;}
+  .wk-empty{border:1px dashed var(--line);border-radius:var(--radius);padding:18px;font-size:13px;color:var(--muted);background:var(--card);}
+  .wk-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;}
+  .wk-body{margin-top:12px;border-top:1px dashed var(--line);padding-top:14px;}
+  .wk-meals{display:flex;flex-direction:column;gap:10px;}
+  .wk-editname{cursor:pointer;border:none;background:none;color:var(--muted);font-size:13px;padding:2px 4px;line-height:1;}
+  .wk-editname:hover{color:var(--spruce);}
+  .wk-nameinput{font:inherit;font-size:13.5px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;max-width:170px;}
+
+  /* ---------- STATISTIKK ---------- */
+  .stat-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:8px;}
+  @media (max-width:600px){ .stat-cards{grid-template-columns:1fr;} }
+  .stat-card{position:relative;text-align:left;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;display:flex;flex-direction:column;gap:7px;transition:transform .18s ease,box-shadow .18s ease,border-color .18s;font:inherit;overflow:hidden;}
+  .stat-card::after{content:"→";position:absolute;right:18px;top:18px;color:var(--muted);opacity:0;transform:translateX(-6px);transition:opacity .18s,transform .18s;font-size:15px;}
+  .stat-card:hover{transform:translateY(-3px);border-color:#cfe1ce;box-shadow:0 2px 4px rgba(20,36,28,.06),0 14px 32px rgba(20,36,28,.11);}
+  .stat-card:hover::after{opacity:1;transform:none;}
+  .sc-ic{font-size:22px;display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;background:#f4f8f3;border:1px solid var(--line);border-radius:11px;transform:rotate(-3deg);}
+  .sc-t{font-family:'Bricolage Grotesque',sans-serif;font-size:16.5px;font-weight:700;color:var(--spruce);}
+  .sc-d{font-size:12.5px;color:var(--muted);line-height:1.55;}
+  .stat-back{cursor:pointer;border:none;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--muted);padding:0 0 12px;}
+  .stat-back:hover{color:var(--ink);}
+
+  /* Kvitteringsstripe: nøkkeltall som pris-poster, skilt med stiplede linjer */
+  .kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin:4px 0 20px;overflow:hidden;}
+  .kpi{padding:18px 20px 15px;border-left:1px dashed var(--line);}
+  .kpi:first-child{border-left:none;}
+  @media (max-width:640px){ .kpi{border-left:none;border-top:1px dashed var(--line);} .kpi:first-child{border-top:none;} }
+  .kpi-num{font-family:'Bricolage Grotesque',sans-serif;font-size:27px;font-weight:800;letter-spacing:-.02em;color:var(--spruce);line-height:1.05;display:flex;align-items:baseline;gap:4px;}
+  .kpi-suf{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--kroner);letter-spacing:.02em;}
+  .kpi-lab{font-size:12px;color:var(--muted);margin-top:5px;}
+  .kpi-sub{font-size:10.5px;color:var(--muted);margin-top:2px;font-family:'IBM Plex Mono',monospace;}
+
+  .stat-block{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:18px;}
+  .stat-block h3{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:700;margin:0 0 4px;color:var(--spruce);}
+  .stat-block h3::after{content:"";display:block;border-bottom:1px dashed var(--line);margin:10px 0 12px;}
+  .bar-row{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:12.5px;border-radius:8px;padding:2px 4px;transition:background .12s;}
+  .bar-row:hover{background:#f7faf6;}
+  .bar-lab{flex:0 0 118px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'IBM Plex Mono',monospace;font-size:11px;}
+  .bar-track{flex:1;background:#eef2ec;border-radius:6px;height:20px;overflow:hidden;}
+  .bar-fill{height:100%;background:linear-gradient(180deg,#37795a,var(--spruce-2));border-radius:6px 0 0 6px;min-width:2px;transition:width .55s cubic-bezier(.22,.8,.36,1);}
+  .bar-val{flex:0 0 auto;color:var(--ink);font-weight:600;white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
+
+  .donut-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
+  .donut{width:128px;height:128px;transform:rotate(0deg);flex:0 0 auto;}
+  .legend{display:flex;flex-direction:column;gap:6px;min-width:180px;flex:1;}
+  .legend-row{display:flex;align-items:center;gap:9px;font-size:12.5px;}
+  .legend-dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto;}
+  .legend-lab{flex:1;color:var(--ink);}
+  .legend-val{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+
+  body::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)'/%3E%3C/svg%3E");}
+  .topbar{background:rgba(255,255,255,.86);backdrop-filter:saturate(1.3) blur(8px);-webkit-backdrop-filter:saturate(1.3) blur(8px);}
+  main,.topbar,.auth-modal{position:relative;z-index:2;}
+
+  .ticker{position:relative;margin-top:52px;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);background:rgba(255,255,255,.6);overflow:hidden;padding:11px 0;}
+  .ticker-track{display:inline-flex;gap:34px;white-space:nowrap;will-change:transform;animation:tick 60s linear infinite;}
+  .ticker:hover .ticker-track{animation-play-state:paused;}
+  @keyframes tick{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  .tk{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+  .tk b{color:var(--kroner);font-weight:600;}
+  .tk::after{content:"·";margin-left:34px;color:var(--line);}
+  .ticker-lab{text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:9px;}
+  @media (prefers-reduced-motion: reduce){ .ticker-track{animation:none!important;} }
+
+  .feat{transition:transform .22s ease,box-shadow .22s ease;}
+  .feat:hover{transform:translateY(-4px);box-shadow:0 2px 4px rgba(20,36,28,.06),0 14px 34px rgba(20,36,28,.11);}
+  .cta{transition:background .15s,transform .12s ease,box-shadow .15s;}
+  .cta:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(30,77,58,.28);}
+
+  @media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important;} .spinner{animation:spin 1s linear infinite!important;} .hero h2,.hero p.lead,.hero .cta,.feat{opacity:1!important;} }
+
+
+  .auth{margin-left:auto;align-self:center;display:flex;align-items:center;gap:10px;}
+  .auth-btn{cursor:pointer;border:1px solid var(--spruce);background:var(--spruce);color:#fff;border-radius:9px;font:inherit;font-size:13px;font-weight:600;padding:7px 14px;transition:background .15s;}
+  .auth-btn:hover{background:#173d2e;}
+  .auth-btn.ghost{background:#fff;color:var(--spruce);}
+  .auth-btn.ghost:hover{background:#f4f8f3;}
+  .auth-user{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--spruce-2);}
+  .auth-modal{position:fixed;inset:0;background:rgba(20,36,28,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .auth-modal[hidden]{display:none;}
+  .auth-box{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 40px rgba(20,36,28,.25);padding:26px 24px;max-width:380px;width:100%;}
+  .auth-box h2{font-family:'Bricolage Grotesque',sans-serif;font-size:20px;margin:0 0 4px;color:var(--spruce);}
+  .auth-box .sub{font-size:12.5px;color:var(--muted);margin:0 0 16px;}
+  .auth-box label{display:block;font-size:12.5px;font-weight:600;margin:0 0 5px;}
+  .auth-box input{width:100%;border:1px solid var(--line);border-radius:9px;background:#fbfcfa;padding:10px 12px;font:inherit;font-size:13.5px;margin-bottom:12px;color:var(--ink);}
+  .auth-box input:focus{outline:2px solid var(--spruce-2);outline-offset:1px;}
+  .auth-row{display:flex;gap:8px;}
+  .auth-row .auth-btn{flex:1;text-align:center;}
+  .auth-close{position:absolute;top:10px;right:14px;border:none;background:none;font-size:24px;color:var(--muted);cursor:pointer;line-height:1;}
+  .auth-msg{margin-top:12px;font-size:13px;border-radius:9px;padding:10px 12px;display:none;}
+  .auth-msg.ok{display:block;background:#f4f8f3;border:1px solid #d7e6d6;color:var(--spruce);}
+  .auth-msg.err{display:block;background:#fbf6ee;border:1px solid #ecdcc4;color:var(--kroner);}
+  .auth-msg.info{display:block;background:#f0f1ee;border:1px solid var(--line);color:var(--muted);}
+  .save-profile{width:100%;margin-top:10px;cursor:pointer;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--spruce);font:inherit;font-weight:600;font-size:14px;padding:12px;transition:border-color .15s,background .15s;}
+  .save-profile:hover{border-color:var(--spruce-2);background:#f4f8f3;}
+  .save-profile[hidden]{display:none;}
+  .auth-box textarea{width:100%;border:1px solid var(--line);border-radius:9px;background:#fbfcfa;padding:10px 12px;font:inherit;font-size:13.5px;margin-bottom:6px;color:var(--ink);resize:vertical;min-height:120px;line-height:1.5;}
+  .auth-box textarea:focus{outline:2px solid var(--spruce-2);outline-offset:1px;}
+  .use-menu-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:14px 16px;}
+  .use-menu{cursor:pointer;border:none;border-radius:10px;background:var(--spruce);color:#fff;font:inherit;font-weight:600;font-size:14px;padding:11px 18px;transition:background .15s;white-space:nowrap;}
+  .use-menu:hover{background:#173d2e;}
+  .use-menu[disabled]{opacity:.7;cursor:default;}
+  .use-menu-hint{font-size:12.5px;color:var(--muted);}
+  .obs{background:#fbf6ee;border:1px solid #ecdcc4;border-radius:12px;padding:15px 17px;box-shadow:var(--shadow);}
+  .obs-title{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:15px;color:var(--kroner);margin-bottom:6px;}
+  .obs-body{font-size:13px;color:var(--ink);margin-bottom:8px;}
+  .obs-line{font-size:13px;color:var(--ink);margin:3px 0;}
+  .obs-line b{color:var(--spruce-2);}
+  .obs-price{font-size:12px;color:var(--muted);margin-top:9px;border-top:1px dashed #ecdcc4;padding-top:8px;}
+  .meal .body .rmeta{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--spruce-2);margin:-2px 0 6px;text-transform:uppercase;}
+  .meal .body .rdesc{font-size:12.5px;color:var(--ink);margin-bottom:9px;line-height:1.45;}
+  .filter-toggle{width:100%;display:flex;align-items:center;gap:8px;cursor:pointer;border:1px solid var(--line);background:#fbfcfa;color:var(--ink);border-radius:9px;padding:10px 12px;font:inherit;font-size:13px;font-weight:600;transition:border-color .15s,background .15s;}
+  .filter-toggle:hover{border-color:var(--spruce-2);}
+  .filter-toggle .filter-caret{margin-left:auto;color:var(--muted);transition:transform .2s;}
+  .filter-toggle[aria-expanded="true"] .filter-caret{transform:rotate(180deg);}
+  .filter-badge{background:var(--spruce);color:#fff;border-radius:999px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:1px 7px;}
+  .filter-panel{margin-top:10px;padding:16px;border:1px solid var(--line);border-radius:10px;background:#fbfcfa;flex-direction:column;gap:18px;animation:rise .25s ease both;}
+  .filter-panel[hidden]{display:none;}
+  .filter-panel:not([hidden]){display:flex;}
+  .filter-group > label{display:block;font-size:12px;font-weight:600;margin-bottom:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+
+  .sliders-row{display:flex;gap:14px;}
+  .slider-block{flex:1;min-width:0;}
+  .slider-block > label{display:block;font-size:12px;font-weight:600;margin-bottom:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .slider-wrap{display:flex;gap:10px;height:132px;}
+  .vslider{writing-mode:vertical-lr;direction:rtl;width:22px;height:132px;margin:0;accent-color:var(--spruce);cursor:pointer;}
+  .slider-ticks{display:flex;flex-direction:column;justify-content:space-between;font-size:11px;color:var(--muted);line-height:1;flex:1;}
+  .slider-ticks span{transition:color .15s,font-weight .15s;}
+  .slider-ticks span.on{color:var(--spruce);font-weight:600;}
+  .slider-ticks span.off{color:#c4ccc2;}
+  .slider-cap{margin-top:9px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--spruce-2);font-weight:500;}
+
+  .kjokken-search{width:100%;border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px;font:inherit;font-size:13px;color:var(--ink);}
+  .kjokken-search:focus{outline:2px solid var(--spruce-2);outline-offset:1px;}
+  .kjokken-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .kjokken-chips:empty{margin-top:0;}
+  .kjokken-chips .kchip{display:inline-flex;align-items:center;gap:5px;background:var(--spruce);color:#fff;border-radius:999px;font-size:12px;padding:3px 6px 3px 10px;font-weight:500;}
+  .kjokken-chips .kchip button{background:none;border:none;color:#fff;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;opacity:.8;}
+  .kjokken-chips .kchip button:hover{opacity:1;}
+  .kjokken-list{max-height:168px;overflow-y:auto;margin-top:8px;border:1px solid var(--line);border-radius:9px;background:#fff;}
+  .kjokken-list .kitem{display:flex;align-items:center;gap:9px;width:100%;text-align:left;cursor:pointer;border:none;background:none;padding:9px 11px;font:inherit;font-size:13px;color:var(--ink);border-bottom:1px solid var(--line);transition:background .12s;}
+  .kjokken-list .kitem:last-child{border-bottom:none;}
+  .kjokken-list .kitem:hover{background:#f4f8f3;}
+  .kjokken-list .kitem.sel{background:#eef4ec;font-weight:600;color:var(--spruce);}
+  .kjokken-list .kitem .flag{font-size:16px;}
+  .kjokken-list .kitem .check{margin-left:auto;color:var(--spruce);opacity:0;}
+  .kjokken-list .kitem.sel .check{opacity:1;}
+  .pantry{margin-top:18px;border-top:1px solid var(--line);padding-top:16px;}
+  .pantry > label{display:block;font-size:13px;font-weight:600;margin-bottom:4px;}
+  .pantry-sub{font-size:12.5px;color:var(--muted);margin:0 0 10px;line-height:1.45;}
+  .pantry-search{width:100%;border:1px solid var(--line);border-radius:9px;background:#fbfcfa;padding:9px 11px;font:inherit;font-size:13px;color:var(--ink);}
+  .pantry-search:focus{outline:2px solid var(--spruce-2);outline-offset:1px;}
+  .pantry-list{max-height:170px;overflow-y:auto;margin-top:6px;border:1px solid var(--line);border-radius:9px;background:#fff;}
+  .pantry-list[hidden]{display:none;}
+  .pantry-list .pitem{display:flex;align-items:center;gap:8px;width:100%;text-align:left;cursor:pointer;border:none;background:none;padding:9px 11px;font:inherit;font-size:13px;color:var(--ink);border-bottom:1px solid var(--line);}
+  .pantry-list .pitem:last-child{border-bottom:none;}
+  .pantry-list .pitem:hover{background:#f4f8f3;}
+  .pantry-list .pitem .pk{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+  .pantry-items{margin-top:10px;display:flex;flex-direction:column;gap:7px;}
+  .pantry-row{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:9px;background:#fbfcfa;padding:8px 10px;}
+  .pantry-row .navn{font-size:13px;font-weight:500;flex:1;min-width:0;}
+  .pantry-row .navn small{display:block;font-weight:400;font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .pantry-row input.mengde{width:76px;border:1px solid var(--line);border-radius:7px;padding:6px 7px;font:inherit;font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;background:#fff;color:var(--ink);}
+  .pantry-row .enhet{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+  .pantry-row .fjern{background:none;border:none;cursor:pointer;color:var(--muted);font-size:17px;line-height:1;padding:0 3px;}
+  .pantry-row .fjern:hover{color:var(--kroner);}
+  .pantry-tom{font-size:12.5px;color:var(--muted);font-style:italic;padding:4px 0;}
+  .pantry-msg{font-size:12.5px;margin-top:8px;min-height:16px;}
+  .pantry-msg.ok{color:var(--spruce-2);}
+  .pantry-msg.err{color:var(--kroner);}
+  .hjemme-rad[hidden]{display:none;}
+  .hjemme-valg{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;font-weight:600;margin-bottom:0;}
+  .hjemme-valg input{width:17px;height:17px;accent-color:var(--spruce);cursor:pointer;flex:0 0 auto;}
+  .hjemme-hint{font-size:11.5px;color:var(--muted);margin:6px 0 0;line-height:1.45;}
+  .r-hjemme{margin-top:11px;padding-top:10px;border-top:1px dashed var(--line);}
+  .r-hjemme-lab{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+  .r-hjemme-linje{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--spruce-2);padding:2px 0;}
+  .r-spart{margin-top:9px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--spruce-2);text-align:center;}
+  .r-spart b{color:var(--spruce);}
+  .r-line .r-name em{font-style:normal;font-size:10.5px;color:var(--spruce-2);}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="tb-wrap">
+    <a class="tb-brand" href="#" data-nav="home"><h1>Veke<b>s</b></h1></a>
+    <nav class="tb-nav" id="tbNav">
+      <button class="tb-link is-here" data-nav="home">Hjem</button>
+      <button class="tb-link" data-nav="plan">Lag ukesmeny</button>
+      <button class="tb-link" data-nav="history">Mine uker</button>
+      <button class="tb-link" data-nav="stats">Statistikk</button>
+      <button class="tb-link" id="openProfile" hidden>Min profil</button>
+      <button class="tb-link" id="navAdmin" data-nav="admin" hidden>Admin</button>
+    </nav>
+    <div class="tb-right">
+      <div class="auth" id="authArea"></div>
+      <button class="tb-burger" id="tbBurger" aria-label="Åpne meny">☰</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<section class="page" id="page-home">
+  <div class="hero">
+    <div class="hero-blob b1"></div>
+    <div class="hero-blob b2"></div>
+    <div class="hero-inner">
+      <span class="ai-badge">Drevet av Claude</span>
+      <h2 style="margin-top:14px;">Spis <span class="rot" id="rotWord"><span>variert</span></span>,<br>planlegg enkelt, spar penger</h2>
+      <p class="lead">Vekes setter sammen ukens middager for deg — variert og sunn mat tilpasset hverdagen din, med ferdig handleliste og totalpris bygget på norske dagligvarer.</p>
+      <button class="cta" data-nav="plan">Lag ukesmeny →</button>
+      <div class="hero-feats">
+        <div class="feat"><div class="fi">🍽</div><h3>Variert uke</h3><p>Beskriv hverdagen din, så settes menyen sammen med retter fra hele verden — aldri samme uke to ganger.</p></div>
+        <div class="feat"><div class="fi">🧾</div><h3>Ferdig handleliste</h3><p>Én liste med alt du trenger og hva det koster — klar til butikken, med pris per porsjon.</p></div>
+        <div class="feat"><div class="fi">🏠</div><h3>Bruk det du har</h3><p>Legg inn det du har hjemme, så prioriteres det i menyen — og handlelista trekker det fra.</p></div>
+      </div>
+    </div>
+    <div class="ticker" aria-hidden="true"><div class="ticker-track" id="tickerTrack"></div></div>
+    <div class="ticker-lab">Veiledende priser · norske dagligvarer</div>
+  </div>
+</section>
+
+<section class="page" id="page-plan" hidden>
+  <div class="wrap" style="padding-top:26px;">
+  <div class="grid">
+    <section class="panel sticky">
+      <p class="eyebrow">Dine mål</p>
+
+      <div class="field">
+        <label>Antall middager</label>
+        <div class="stepper-row">
+          <div class="stepper" data-step="dinners">
+            <button data-d="-1" aria-label="Færre middager">−</button>
+            <span class="val num" id="dinnersVal">5</span>
+            <button data-d="1" aria-label="Flere middager">+</button>
+          </div>
+          <span class="hint">middager denne uka</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Antall personer</label>
+        <div class="stepper-row">
+          <div class="stepper" data-step="persons">
+            <button data-d="-1" aria-label="Færre personer">−</button>
+            <span class="val num" id="personsVal">2</span>
+            <button data-d="1" aria-label="Flere personer">+</button>
+          </div>
+          <span class="hint">porsjoner per middag</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Prioritet</label>
+        <div class="seg compact" id="pref">
+          <button data-v="protein">Mest protein</button>
+          <button data-v="karbo">Lite karbo</button>
+          <button data-v="billig">Billigst</button>
+          <button data-v="balansert" class="is-active">Balansert</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="false">
+          <span>⚙ Filter</span>
+          <span class="filter-badge" id="filterBadge" hidden></span>
+          <span class="filter-caret" id="filterCaret">▾</span>
+        </button>
+        <div class="filter-panel" id="filterPanel" hidden>
+          <div class="sliders-row">
+            <div class="slider-block">
+              <label>Vanskelighet</label>
+              <div class="slider-wrap">
+                <input type="range" class="vslider" id="fNivaSlider" min="1" max="4" step="1" value="4">
+                <div class="slider-ticks">
+                  <span data-lvl="4">Ekspert</span>
+                  <span data-lvl="3">Vanskelig</span>
+                  <span data-lvl="2">Middels</span>
+                  <span data-lvl="1">Enkel</span>
+                </div>
+              </div>
+              <div class="slider-cap" id="fNivaCap">Opp til Ekspert</div>
+            </div>
+            <div class="slider-block">
+              <label>Maks tid</label>
+              <div class="slider-wrap">
+                <input type="range" class="vslider" id="fTidSlider" min="1" max="5" step="1" value="5">
+                <div class="slider-ticks">
+                  <span data-lvl="5">90 min</span>
+                  <span data-lvl="4">60 min</span>
+                  <span data-lvl="3">45 min</span>
+                  <span data-lvl="2">30 min</span>
+                  <span data-lvl="1">15 min</span>
+                </div>
+              </div>
+              <div class="slider-cap" id="fTidCap">Ingen grense</div>
+            </div>
+          </div>
+          <div class="filter-group">
+            <label>Kjøkken</label>
+            <input type="text" id="kjokkenSearch" class="kjokken-search" placeholder="Søk etter matland …" autocomplete="off">
+            <div class="kjokken-chips" id="kjokkenChips"></div>
+            <div class="kjokken-list" id="kjokkenList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field hjemme-rad" id="harHjemmeRad" hidden>
+        <label class="hjemme-valg">
+          <input type="checkbox" id="brukHarHjemme">
+          <span>Bruk mest mulig av det jeg har hjemme</span>
+        </label>
+        <p class="hjemme-hint">Menyen prioriterer varene i profilen din, og handlelista trekker fra det du allerede har.</p>
+      </div>
+
+      <div class="field">
+        <label>Beskriv hverdagen din <span style="font-weight:400;color:var(--muted)">(la Claude tilpasse)</span></label>
+        <textarea id="freeText" placeholder="F.eks: «Jeg sykler langt i helgene og trener styrke to ganger i uka, men vil ned et par kilo til sommeren. Lite tid på hverdager.»"></textarea>
+        <p class="ai-hint">Skriver du noe her, sender appen det til <b>Claude</b>, som setter kalori- og makromål og forklarer tilpasningen. Lar du feltet stå tomt, brukes valgene over.</p>
+      </div>
+
+      <button class="cta" id="generate"><span id="ctaLabel">Lag ukesmeny</span></button>
+    </section>
+
+    <section class="results" id="results"></section>
+  </div>
+  </div>
+</section>
+
+<section class="page" id="page-history" hidden>
+  <div class="page-plain">
+    <h2>Mine uker</h2>
+    <p class="psub">Ukesmenyene dine — den aktive uka, planlagte uker fremover, og arkivet.</p>
+    <div id="weeksMsg" class="auth-msg"></div>
+    <div class="wk-group"><h3 class="wk-head">Aktiv uke</h3><div id="wkAktiv" class="adm-list"></div></div>
+    <div class="wk-group"><h3 class="wk-head">Planlagte uker</h3><div id="wkPlanlagt" class="adm-list"></div></div>
+    <div class="wk-group"><h3 class="wk-head">Arkiv</h3><div id="wkArkiv" class="adm-list"></div></div>
+  </div>
+</section>
+
+<section class="page" id="page-stats" hidden>
+  <div class="page-plain">
+    <h2>Statistikk</h2>
+    <p class="psub">Velg et tema. Statistikken bygger kun på uker du har trykket «Bruk denne menyen» på — altså mat du faktisk har laget.</p>
+    <div class="stat-cards">
+      <button class="stat-card" data-nav="stats-okonomi"><span class="sc-ic">💰</span><span class="sc-t">Økonomi</span><span class="sc-d">Hva maten koster, snitt per uke og per porsjon, dyreste og billigste uke.</span></button>
+      <button class="stat-card" data-nav="stats-mat"><span class="sc-ic">🍽</span><span class="sc-t">Mat &amp; smak</span><span class="sc-d">Mest brukte retter, favorittkjøkken og diett-fordeling.</span></button>
+      <button class="stat-card" data-nav="stats-ernaring"><span class="sc-ic">🥗</span><span class="sc-t">Ernæring</span><span class="sc-d">Snitt kalorier og makroer i maten du velger.</span></button>
+      <button class="stat-card" data-nav="stats-aktivitet"><span class="sc-ic">📅</span><span class="sc-t">Aktivitet</span><span class="sc-d">Hvor mye du planlegger og bruker Vekes.</span></button>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="page-stats-okonomi" hidden>
+  <div class="page-plain">
+    <button class="stat-back" data-nav="stats">← Statistikk</button>
+    <h2>Økonomi</h2>
+    <p class="psub">Basert på brukte uker. Prisene er dagens priser fra databasen, ikke hva uka kostet akkurat da — små forskjeller kan forekomme.</p>
+    <div id="okoInnhold"></div>
+  </div>
+</section>
+
+<section class="page" id="page-stats-mat" hidden>
+  <div class="page-plain">
+    <button class="stat-back" data-nav="stats">← Statistikk</button>
+    <h2>Mat &amp; smak</h2>
+    <p class="psub">Basert på brukte uker — maten du faktisk har laget.</p>
+    <div id="matInnhold"></div>
+  </div>
+</section>
+
+<section class="page" id="page-stats-ernaring" hidden>
+  <div class="page-plain">
+    <button class="stat-back" data-nav="stats">← Statistikk</button>
+    <h2>Ernæring</h2>
+    <p class="psub">Snittverdier per porsjon, basert på brukte uker.</p>
+    <div id="ernInnhold"></div>
+  </div>
+</section>
+
+<section class="page" id="page-stats-aktivitet" hidden>
+  <div class="page-plain">
+    <button class="stat-back" data-nav="stats">← Statistikk</button>
+    <h2>Aktivitet</h2>
+    <p class="psub">Hvor mye du planlegger og bruker Vekes.</p>
+    <div id="aktInnhold"></div>
+  </div>
+</section>
+
+<section class="page" id="page-admin" hidden>
+  <div class="page-plain">
+    <h2>Admin — fremgangsmåter</h2>
+    <p class="psub">Generer og godkjenn en fast fremgangsmåte for hver rett. Regelen: mengde-nøytral — ingen absolutte mengder, bare relative formuleringer. Steg som ser ut til å bryte regelen, markeres gult.</p>
+    <p class="psub" id="admStatus"></p>
+    <div class="adm-list" id="admList"></div>
+  </div>
+</section>
+
+</main>
+
+<script>
+/* ---------- NAVIGASJON (sider) ---------- */
+(function(){
+  const PAGES={home:"page-home",plan:"page-plan",history:"page-history",stats:"page-stats","stats-okonomi":"page-stats-okonomi","stats-mat":"page-stats-mat","stats-ernaring":"page-stats-ernaring","stats-aktivitet":"page-stats-aktivitet",admin:"page-admin"};
+  const nav=document.getElementById("tbNav");
+  function goto(name){
+    if(!PAGES[name]) return;
+    Object.entries(PAGES).forEach(([k,id])=>{ const el=document.getElementById(id); if(el) el.hidden=(k!==name); });
+    document.querySelectorAll(".tb-link[data-nav]").forEach(b=>b.classList.toggle("is-here",b.dataset.nav===name));
+    if(nav) nav.classList.remove("open");
+    if(name==="admin"&&window.MM_renderAdmin) window.MM_renderAdmin();
+    if(name==="history"&&window.MM_renderWeeks) window.MM_renderWeeks();
+    if(name==="stats-okonomi"&&window.MM_renderOkonomi) window.MM_renderOkonomi();
+    if(name==="stats-mat"&&window.MM_renderMat) window.MM_renderMat();
+    if(name==="stats-ernaring"&&window.MM_renderErnaring) window.MM_renderErnaring();
+    if(name==="stats-aktivitet"&&window.MM_renderAktivitet) window.MM_renderAktivitet();
+    window.scrollTo(0,0);
+  }
+  window.MM_goto=goto;
+  document.querySelectorAll("[data-nav]").forEach(el=>el.addEventListener("click",e=>{ e.preventDefault(); goto(el.dataset.nav); }));
+  const burger=document.getElementById("tbBurger");
+  if(burger&&nav) burger.addEventListener("click",()=>nav.classList.toggle("open"));
+
+  /* Roterende ord på forsiden */
+  const words=["variert","sunt","smart","godt"];
+  const rot=document.getElementById("rotWord");
+  const reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(rot&&!reduced){
+    let i=0;
+    setInterval(()=>{ i=(i+1)%words.length; rot.innerHTML="<span>"+words[i]+"</span>"; },2600);
+  }
+
+  /* Pristape: fylles med ekte varer og priser når appen har lastet data */
+  window.addEventListener("load",()=>{
+    const track=document.getElementById("tickerTrack"); if(!track) return;
+    function fill(){
+      let items=[];
+      try{ if(typeof ING!=="undefined"&&ING) items=Object.values(ING).map(i=>({n:i.n,p:i.pris})).filter(i=>i.n&&isFinite(i.p)); }catch(e){}
+      if(!items.length){ setTimeout(fill,1500); return; }
+      const html=items.map(i=>`<span class="tk">${i.n} <b>${Math.round(i.p)} kr</b></span>`).join("");
+      track.innerHTML=html+html;
+    }
+    fill();
+  });
+})();
+</script>
+
+<div class="auth-modal" id="authModal" hidden>
+  <div class="auth-box">
+    <button class="auth-close" id="authClose" aria-label="Lukk">×</button>
+    <h2>Logg inn</h2>
+    <p class="sub">Logg inn med e-posten du ble invitert med. Da lagres profilen, preferansene og menyene dine.</p>
+    <label>E-post</label>
+    <input id="authEmail" type="email" placeholder="deg@epost.no" autocomplete="email" />
+    <label>Passord</label>
+    <input id="authPw" type="password" placeholder="minst 6 tegn" autocomplete="current-password" />
+    <div class="auth-row">
+      <button class="auth-btn ghost" id="authSignup" hidden>Registrer</button>
+      <button class="auth-btn" id="authSignin">Logg inn</button>
+    </div>
+    <div class="auth-msg" id="authMsg"></div>
+  </div>
+</div>
+
+<div class="auth-modal" id="setPwModal" hidden>
+  <div class="auth-box">
+    <h2>Velg et passord</h2>
+    <p class="sub">Velkommen! Sett et passord for kontoen din, så er du klar til å bruke Vekes. Du bruker dette passordet neste gang du logger inn.</p>
+    <div id="setPwFields">
+      <label>Nytt passord</label>
+      <input id="setPw1" type="password" placeholder="minst 6 tegn" autocomplete="new-password" />
+      <label>Gjenta passord</label>
+      <input id="setPw2" type="password" placeholder="skriv passordet på nytt" autocomplete="new-password" />
+      <button class="auth-btn" id="setPwSave" style="width:100%;margin-top:6px;">Lagre passord</button>
+    </div>
+    <div class="auth-msg" id="setPwMsg"></div>
+  </div>
+</div>
+
+<div class="auth-modal" id="profileModal" hidden>
+  <div class="auth-box">
+    <button class="auth-close" id="profileClose" aria-label="Lukk">×</button>
+    <h2>Min profil</h2>
+    <p class="sub">Skriv litt om deg og familien — kosthold, trening, hverdag, og hva dere liker eller ikke liker. Dette tas med i <b>hver meny</b> du lager, helt til du endrer det.</p>
+    <label>Om deg og familien</label>
+    <textarea id="profileAbout" rows="6" placeholder="F.eks: Vi er en familie på 4 som spiser vegansk. Jeg trener styrke fire ganger i uka. Hektiske hverdager, så vi vil ha enkle middager. Vi elsker pasta og curry, men liker ikke sopp."></textarea>
+
+    <div class="pantry">
+      <label>Har hjemme</label>
+      <p class="pantry-sub">Legg inn varer du har fra før. Menyen tar hensyn til dem, og handlelista trekker fra det du allerede har.</p>
+      <input type="text" id="pantrySearch" class="pantry-search" placeholder="Søk etter vare …" autocomplete="off">
+      <div class="pantry-list" id="pantryFinner" hidden></div>
+      <div class="pantry-items" id="pantryItems"></div>
+      <div class="pantry-msg" id="pantryMsg"></div>
+    </div>
+
+    <button class="auth-btn" id="profileSave" style="width:100%;margin-top:6px;">Lagre profil</button>
+    <div class="auth-msg" id="profileMsg"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- DATA (eksempeldata / dummy) ---------- */
+let ING = {
+  kyllingfilet:{n:"Kyllingfilet",kat:"Kjøtt",kcal:106,p:22,k:0,f:1.8,pg:600,pris:75,pk:"600 g",los:true},
+  kjottdeig:{n:"Kjøttdeig 14%",kat:"Kjøtt",kcal:211,p:18.6,k:0,f:14,pg:400,pris:45,pk:"400 g",los:true},
+  svinekotelett:{n:"Svinekotelett",kat:"Kjøtt",kcal:172,p:21,k:0,f:9,pg:600,pris:70,pk:"600 g",los:true},
+  kyllinglar:{n:"Kyllinglår",kat:"Kjøtt",kcal:161,p:18,k:0,f:9.5,pg:1000,pris:60,pk:"1 kg",los:true},
+  laksefilet:{n:"Laksefilet",kat:"Fisk",kcal:208,p:20,k:0,f:13,pg:500,pris:95,pk:"500 g",los:true},
+  torskefilet:{n:"Torskefilet lettsaltet",kat:"Fisk",kcal:75,p:18.1,k:0,f:0.3,pg:570,pris:85.44,pk:"570 g",los:true},
+  ris:{n:"Jasminris",kat:"Tørrvarer",kcal:360,p:7,k:79,f:0.6,pg:1000,pris:32,pk:"1 kg"},
+  pasta:{n:"Pasta",kat:"Tørrvarer",kcal:359,p:12,k:72,f:1.5,pg:500,pris:19,pk:"500 g"},
+  poteter:{n:"Poteter",kat:"Frukt & grønt",kcal:75,p:2,k:16,f:0.1,pg:2000,pris:35,pk:"2 kg",los:true,eg:90,en:"potet",ef:"poteter"},
+  egg:{n:"Egg frittgående 12 stk",kat:"Meieri & egg",kcal:149,p:13,k:0.3,f:10.6,pg:700,pris:65.9,pk:"12 stk"},
+  olivenolje:{n:"Olivenolje",kat:"Tørrvarer",kcal:884,p:0,k:0,f:100,pg:500,pris:55,pk:"500 ml"},
+  lok:{n:"Løk gul",kat:"Frukt & grønt",kcal:32,p:1.1,k:5.7,f:0.1,pg:1000,pris:29.9,pk:"1 kg",los:true,eg:110,en:"løk",ef:"løk"},
+  hvitlok:{n:"Hvitløk",kat:"Frukt & grønt",kcal:149,p:6,k:30,f:0.5,pg:150,pris:18,pk:"150 g",los:true,eg:55,en:"hvitløk",ef:"hvitløk"},
+  paprika:{n:"Paprika rød",kat:"Frukt & grønt",kcal:26,p:0.8,k:4.2,f:0.2,pg:180,pris:14.38,pk:"180 g",los:true,eg:160,en:"paprika",ef:"paprika"},
+  gulrot:{n:"Gulrot",kat:"Frukt & grønt",kcal:41,p:0.9,k:9,f:0.2,pg:1000,pris:20,pk:"1 kg",los:true,eg:75,en:"gulrot",ef:"gulrøtter"},
+  brokkoli:{n:"Brokkoli",kat:"Frukt & grønt",kcal:28,p:3.2,k:1.9,f:0.3,pg:350,pris:21.9,pk:"1 stk",los:true,eg:350,en:"brokkoli",ef:"brokkoli"},
+  squash:{n:"Squash",kat:"Frukt & grønt",kcal:17,p:1.2,k:3,f:0.3,pg:300,pris:22,pk:"1 stk",los:true,eg:250,en:"squash",ef:"squash"},
+  knusteTomater:{n:"Finhakkede tomater",kat:"Hermetikk",kcal:30,p:1.6,k:5,f:0.2,pg:400,pris:23.6,pk:"400 g"},
+  tortilla:{n:"Tortillalefser",kat:"Bakevarer",kcal:310,p:8,k:50,f:7,pg:320,pris:12.9,pk:"8 stk"},
+  romme:{n:"Lettrømme Tine",kat:"Meieri & egg",kcal:179,p:2.8,k:3.7,f:17,pg:300,pris:24.9,pk:"300 g"},
+  revetOst:{n:"Revet ost",kat:"Meieri & egg",kcal:347,p:28,k:3,f:26,pg:300,pris:41.9,pk:"300 g"},
+  tacokrydder:{n:"Tacokrydder",kat:"Tørrvarer",kcal:300,p:10,k:50,f:5,pg:40,pris:16,pk:"40 g"},
+  rodeLinser:{n:"Røde linser",kat:"Tørrvarer",kcal:338,p:24,k:52,f:1.5,pg:500,pris:32,pk:"500 g"},
+  kikerter:{n:"Kikerter",kat:"Hermetikk",kcal:119,p:7,k:16,f:2,pg:380,pris:16,pk:"380 g"},
+  kokosmelk:{n:"Kokosmelk",kat:"Hermetikk",kcal:180,p:1.6,k:3,f:18,pg:400,pris:22,pk:"400 ml"},
+  salat:{n:"Salatmix",kat:"Frukt & grønt",kcal:15,p:1.4,k:2,f:0.2,pg:175,pris:25,pk:"1 pose"},
+  cherrytomat:{n:"Cherrytomater",kat:"Frukt & grønt",kcal:23,p:1.4,k:3.2,f:0.2,pg:250,pris:40.5,pk:"250 g",los:true},
+  melk:{n:"Lettmelk 1%",kat:"Meieri & egg",kcal:40,p:3.4,k:4.4,f:1,pg:1000,pris:20.5,pk:"1 l"},
+  smor:{n:"Meierismør Tine",kat:"Meieri & egg",kcal:742,p:0.5,k:0.5,f:82,pg:500,pris:72.9,pk:"500 g"},
+  tofu:{n:"Tofu Naturell",kat:"Plantebasert",kcal:161,p:17,k:1.8,f:9.3,pg:200,pris:33.8,pk:"200 g"},
+  edamame:{n:"Edamame saltet",kat:"Plantebasert",kcal:141,p:12,k:14,f:5.4,pg:400,pris:36.9,pk:"400 g"},
+};
+let RECIPES = [
+  {id:"kylling_ris",navn:"Kylling og ris med brokkoli",tag:"kylling",veg:false,ing:[["kyllingfilet",600],["ris",300],["brokkoli",350],["lok",100],["olivenolje",20],["hvitlok",15]]},
+  {id:"bolognese",navn:"Kjøttdeig og pasta (bolognese)",tag:"storfe",veg:false,ing:[["kjottdeig",400],["pasta",360],["knusteTomater",400],["lok",150],["gulrot",120],["olivenolje",15],["hvitlok",15]]},
+  {id:"taco",navn:"Taco",tag:"storfe",veg:false,ing:[["kjottdeig",400],["tortilla",320],["paprika",200],["lok",100],["romme",150],["revetOst",100],["tacokrydder",40],["salat",100]]},
+  {id:"laks",navn:"Ovnsbakt laks med poteter",tag:"fisk",veg:false,ing:[["laksefilet",500],["poteter",800],["brokkoli",350],["olivenolje",20],["smor",20]]},
+  {id:"torsk",navn:"Torsk med poteter og gulrot",tag:"fisk",veg:false,ing:[["torskefilet",400],["poteter",800],["gulrot",200],["smor",20]]},
+  {id:"wok",navn:"Kyllingwok med grønnsaker",tag:"kylling",veg:false,ing:[["kyllingfilet",500],["ris",300],["paprika",200],["squash",200],["gulrot",150],["lok",100],["olivenolje",20],["hvitlok",15]]},
+  {id:"svin",navn:"Svinekoteletter med potet",tag:"svin",veg:false,ing:[["svinekotelett",600],["poteter",800],["brokkoli",350],["smor",20]]},
+  {id:"kyllinglar",navn:"Kyllinglår med ovnsbakte poteter",tag:"kylling",veg:false,ing:[["kyllinglar",800],["poteter",800],["gulrot",200],["olivenolje",20]]},
+  {id:"grateng",navn:"Fiskegrateng med makaroni",tag:"fisk",veg:false,ing:[["torskefilet",400],["pasta",250],["melk",500],["revetOst",100],["smor",20],["gulrot",100]]},
+  {id:"linsegryte",navn:"Linsegryte med kokos",tag:"vegetar",veg:true,ing:[["rodeLinser",250],["kokosmelk",400],["knusteTomater",400],["lok",150],["gulrot",150],["paprika",150],["ris",250],["olivenolje",15]]},
+  {id:"kikertgryte",navn:"Kikertgryte med ris",tag:"vegetar",veg:true,ing:[["kikerter",760],["knusteTomater",400],["ris",250],["lok",150],["paprika",200],["kokosmelk",200],["olivenolje",15]]},
+  {id:"kyllingsalat",navn:"Kyllingsalat med cherrytomat",tag:"kylling",veg:false,ing:[["kyllingfilet",500],["salat",175],["cherrytomat",250],["paprika",150],["olivenolje",25]]},
+  {id:"omelett",navn:"Omelett med ost og grønnsaker",tag:"vegetar",veg:true,ing:[["egg",480],["revetOst",100],["paprika",150],["lok",80],["melk",100],["smor",20]]},
+  {id:"pasta_squash",navn:"Pasta med tomat og squash",tag:"vegetar",veg:true,ing:[["pasta",360],["knusteTomater",400],["squash",250],["lok",150],["hvitlok",15],["olivenolje",20],["revetOst",60]]},
+  {id:"kyllinggryte",navn:"Kyllinggryte med paprika og ris",tag:"kylling",veg:false,ing:[["kyllingfilet",600],["ris",300],["paprika",250],["lok",150],["knusteTomater",400],["hvitlok",15],["olivenolje",20]]},
+  {id:"kremet_kyllingpasta",navn:"Kremet kyllingpasta med brokkoli",tag:"kylling",veg:false,ing:[["kyllingfilet",500],["pasta",360],["romme",200],["brokkoli",300],["lok",100],["hvitlok",15],["revetOst",60]]},
+  {id:"kjottdeig_ris",navn:"Kjøttdeiggryte med ris",tag:"storfe",veg:false,ing:[["kjottdeig",400],["ris",300],["paprika",200],["lok",150],["knusteTomater",400],["gulrot",120]]},
+  {id:"pastaform",navn:"Pastaform med kjøttdeig og ost",tag:"storfe",veg:false,ing:[["kjottdeig",400],["pasta",300],["knusteTomater",400],["revetOst",100],["melk",200],["lok",150]]},
+  {id:"tacobowl",navn:"Tacobowl med kjøttdeig og ris",tag:"storfe",veg:false,ing:[["kjottdeig",400],["ris",300],["tacokrydder",40],["paprika",200],["lok",100],["knusteTomater",200],["revetOst",80],["salat",100]]},
+  {id:"laks_pasta",navn:"Laks med pasta og squash",tag:"fisk",veg:false,ing:[["laksefilet",500],["pasta",360],["squash",250],["romme",150],["lok",100],["hvitlok",15]]},
+  {id:"torsk_ris",navn:"Torsk med ris og grønnsaker",tag:"fisk",veg:false,ing:[["torskefilet",400],["ris",300],["brokkoli",300],["gulrot",150],["smor",20]]},
+  {id:"kylling_poteter",navn:"Kyllingfilet med ovnspoteter",tag:"kylling",veg:false,ing:[["kyllingfilet",600],["poteter",800],["gulrot",200],["brokkoli",300],["olivenolje",20]]},
+  {id:"svin_ris",navn:"Svinekotelett med ris og paprika",tag:"svin",veg:false,ing:[["svinekotelett",600],["ris",300],["paprika",200],["lok",100],["olivenolje",20]]},
+  {id:"stektris_egg",navn:"Stekt ris med egg og grønnsaker",tag:"vegetar",veg:true,ing:[["egg",360],["ris",350],["paprika",200],["gulrot",150],["lok",100],["olivenolje",25],["hvitlok",15]]},
+  {id:"vegtaco_linser",navn:"Vegetartaco med linser",tag:"vegetar",veg:true,ing:[["rodeLinser",250],["tortilla",320],["tacokrydder",40],["paprika",200],["lok",100],["romme",150],["revetOst",80],["salat",100]]},
+  {id:"pasta_kikerter",navn:"Pasta med kikerter og tomat",tag:"vegetar",veg:true,ing:[["pasta",360],["kikerter",380],["knusteTomater",400],["lok",150],["hvitlok",15],["olivenolje",20],["revetOst",60]]},
+  {id:"frittata",navn:"Potetfrittata med ost",tag:"vegetar",veg:true,ing:[["egg",480],["poteter",500],["paprika",150],["lok",100],["revetOst",100],["melk",100],["olivenolje",15]]},
+  {id:"kyllingfajita",navn:"Kyllingfajitas",tag:"kylling",veg:false,ing:[["kyllingfilet",500],["tortilla",320],["paprika",250],["lok",150],["romme",150],["revetOst",80],["salat",100]]},
+  {id:"fiskesuppe",navn:"Kremet fiskesuppe",tag:"fisk",veg:false,ing:[["torskefilet",300],["laksefilet",200],["poteter",500],["gulrot",150],["lok",100],["melk",500],["romme",150]]},
+  {id:"veg_pasta_tomat",navn:"Vegansk pasta med tomat og squash",tag:"vegetar",veg:true,ing:[["pasta",360],["knusteTomater",400],["squash",250],["lok",150],["hvitlok",15],["olivenolje",20]]},
+  {id:"veg_pasta_linser",navn:"Vegansk tomatpasta med linser",tag:"vegetar",veg:true,ing:[["pasta",360],["rodeLinser",200],["knusteTomater",400],["lok",150],["hvitlok",15],["olivenolje",20]]},
+  {id:"veg_stektris",navn:"Vegansk stekt ris med grønnsaker",tag:"vegetar",veg:true,ing:[["ris",350],["paprika",200],["gulrot",150],["brokkoli",200],["lok",100],["olivenolje",25],["hvitlok",15]]},
+  {id:"veg_kikertcurry",navn:"Kikert- og potetcurry",tag:"vegetar",veg:true,ing:[["kikerter",380],["poteter",600],["kokosmelk",400],["knusteTomater",400],["lok",150],["gulrot",150],["olivenolje",15]]},
+  {id:"veg_linsetaco",navn:"Vegansk linsetaco",tag:"vegetar",veg:true,ing:[["rodeLinser",250],["tortilla",320],["tacokrydder",40],["paprika",200],["lok",100],["salat",100],["knusteTomater",200]]},
+  {id:"veg_kikertwok",navn:"Kikertwok med squash og ris",tag:"vegetar",veg:true,ing:[["kikerter",380],["squash",250],["paprika",200],["gulrot",150],["lok",100],["ris",300],["olivenolje",20]]},
+  {id:"veg_linsesuppe",navn:"Krydret linse- og kokossuppe",tag:"vegetar",veg:true,ing:[["rodeLinser",250],["kokosmelk",400],["gulrot",150],["lok",150],["knusteTomater",400],["hvitlok",15],["olivenolje",15]]},
+  {id:"veg_kikertsalat",navn:"Kikertsalat med cherrytomat",tag:"vegetar",veg:true,ing:[["kikerter",380],["salat",175],["cherrytomat",250],["paprika",150],["lok",80],["olivenolje",25]]},
+  {id:"veg_potetcurry",navn:"Potet- og grønnsakscurry",tag:"vegetar",veg:true,ing:[["poteter",800],["kokosmelk",400],["gulrot",200],["paprika",200],["lok",150],["knusteTomater",400],["olivenolje",15]]},
+  {id:"veg_tomatris",navn:"Tomatris med grønnsaker",tag:"vegetar",veg:true,ing:[["ris",350],["knusteTomater",400],["paprika",200],["squash",250],["lok",150],["hvitlok",15],["olivenolje",20]]},
+  {id:"veg_kikertwrap",navn:"Kikertwraps med salat",tag:"vegetar",veg:true,ing:[["kikerter",380],["tortilla",320],["paprika",200],["lok",100],["salat",100],["cherrytomat",200],["olivenolje",15]]},
+  {id:"veg_squashpasta",navn:"Pasta med squash og hvitløk",tag:"vegetar",veg:true,ing:[["pasta",360],["squash",300],["hvitlok",15],["lok",150],["cherrytomat",250],["olivenolje",25]]},
+  {id:"veg_gronnsakwok",navn:"Grønnsakswok med ris",tag:"vegetar",veg:true,ing:[["ris",300],["brokkoli",250],["paprika",200],["gulrot",150],["squash",200],["lok",100],["hvitlok",15],["olivenolje",20]]},
+  {id:"veg_baktepoteter",navn:"Bakte poteter med kikerter og salsa",tag:"vegetar",veg:true,ing:[["poteter",1000],["kikerter",380],["knusteTomater",400],["paprika",150],["lok",100],["salat",100],["olivenolje",15]]},
+  {id:"tofu_wok",navn:"Tofuwok med grønnsaker og ris",tag:"vegetar",veg:true,ing:[["tofu",500],["ris",300],["brokkoli",250],["paprika",200],["gulrot",150],["lok",100],["hvitlok",15],["olivenolje",20]]},
+  {id:"tofu_curry",navn:"Tofukarri med kokos",tag:"vegetar",veg:true,ing:[["tofu",450],["kokosmelk",400],["ris",300],["paprika",200],["lok",150],["gulrot",150],["knusteTomater",200],["olivenolje",15]]},
+  {id:"edamame_ris",navn:"Edamame- og grønnsaksris",tag:"vegetar",veg:true,ing:[["edamame",500],["ris",350],["paprika",200],["gulrot",150],["lok",100],["hvitlok",15],["olivenolje",20]]},
+  {id:"tofu_taco",navn:"Tofutaco med salsa",tag:"vegetar",veg:true,ing:[["tofu",450],["tortilla",320],["tacokrydder",40],["paprika",200],["lok",100],["salat",100],["knusteTomater",200],["olivenolje",15]]},
+  {id:"protein_gryte",navn:"Proteingryte med linser og edamame",tag:"vegetar",veg:true,ing:[["rodeLinser",200],["edamame",300],["knusteTomater",400],["kokosmelk",200],["lok",150],["gulrot",150],["ris",250],["olivenolje",15]]},
+];
+
+const BASE_SERV=4;
+const DAYS=["Mandag","Tirsdag","Onsdag","Torsdag","Fredag","Lørdag","Søndag"];
+const TAG_LABEL={kylling:"Kylling",storfe:"Storfe",svin:"Svin",fisk:"Fisk",vegetar:"Vegetar"};
+const GOAL_TARGET={muskler:{kcal:2600,p:180,k:280,f:80},ned:{kcal:1800,p:150,k:150,f:60},holde:{kcal:2200,p:130,k:230,f:75}};
+const DINNER_SHARE=0.4;
+
+/* ---------- BEREGNING ---------- */
+function recipeStats(r){
+  let s={kcal:0,p:0,k:0,f:0,cost:0};
+  for(const [id,g] of r.ing){const it=ING[id];s.kcal+=it.kcal*g/100;s.p+=it.p*g/100;s.k+=it.k*g/100;s.f+=it.f*g/100;s.cost+=g*(it.pris/it.pg);}
+  return {kcal:s.kcal/BASE_SERV,p:s.p/BASE_SERV,k:s.k/BASE_SERV,f:s.f/BASE_SERV,cost:s.cost/BASE_SERV};
+}
+// Animalske råvarer (kjøtt, fisk, meieri, egg) — grunnlag for vegan- og senere allergifiltre.
+const ANIMALSK=new Set(["kyllingfilet","kjottdeig","svinekotelett","kyllinglar","laksefilet","torskefilet","egg","romme","revetOst","melk","smor",
+  "bacon","kremflote","parmesan","fiskekaker","wienerpolse","reker","fetaost","greskYoghurt","eggnudler","naan","pesto","honning"]);
+// En rett er vegansk hvis ingen av råvarene er animalske.
+RECIPES.forEach(r=>{ r.vegan = r.ing.every(([id])=> !ANIMALSK.has(id)); });
+
+// Rett-mal: nye felt (vanskelighetsgrad, kjøkken/stil, tilberedningstid, beskrivelse) koblet på hver rett.
+// Foreløpig fylt her; flyttes til Supabase i neste fase. niva: Enkel/Middels/Avansert. tid: minutter.
+const RETT_META={
+  kylling_ris:{niva:"Enkel",kjokken:"Kinesisk",tid:25,desc:"Saftig kyllingfilet med ris og sprø brokkoli — enkel og proteinrik."},
+  bolognese:{niva:"Enkel",kjokken:"Italiensk",tid:30,desc:"Klassisk kjøttdeigsaus som får godgjøre seg, servert over pasta."},
+  taco:{niva:"Enkel",kjokken:"Meksikansk",tid:25,desc:"Fredagsfavoritten — krydret kjøttdeig med friske tilbehør i lefse."},
+  laks:{niva:"Enkel",kjokken:"Norsk",tid:40,desc:"Ovnsbakt laks med poteter og grønnsaker — enkelt og næringsrikt."},
+  torsk:{niva:"Enkel",kjokken:"Norsk",tid:35,desc:"Mør torsk med kokte poteter og gulrot — norsk husmannskost."},
+  wok:{niva:"Enkel",kjokken:"Kinesisk",tid:25,desc:"Rask kyllingwok med fargerike grønnsaker og ris."},
+  svin:{niva:"Enkel",kjokken:"Norsk",tid:35,desc:"Saftige svinekoteletter med poteter og dampet brokkoli."},
+  kyllinglar:{niva:"Enkel",kjokken:"Norsk",tid:50,desc:"Sprøstekte kyllinglår med ovnsbakte poteter og gulrot."},
+  grateng:{niva:"Middels",kjokken:"Norsk",tid:45,desc:"Kremet fiskegrateng med makaroni — trøstemat fra ovnen."},
+  linsegryte:{niva:"Enkel",kjokken:"Indisk",tid:30,desc:"Fyldig linsegryte med kokos og tomat, mild og mettende."},
+  kikertgryte:{niva:"Enkel",kjokken:"Indisk",tid:30,desc:"Krydret kikertgryte med ris — rimelig og proteinrik."},
+  kyllingsalat:{niva:"Enkel",kjokken:"Gresk",tid:20,desc:"Frisk kyllingsalat med cherrytomater og sprø salat."},
+  omelett:{niva:"Enkel",kjokken:"Norsk",tid:20,desc:"Luftig omelett med ost og grønnsaker — rask og proteinrik."},
+  pasta_squash:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Enkel tomatpasta med squash og revet ost."},
+  kyllinggryte:{niva:"Enkel",kjokken:"Norsk",tid:30,desc:"Mettende kyllinggryte med paprika, tomat og ris."},
+  kremet_kyllingpasta:{niva:"Middels",kjokken:"Italiensk",tid:30,desc:"Kremet kyllingpasta med brokkoli og ost — helaften på en halvtime."},
+  kjottdeig_ris:{niva:"Enkel",kjokken:"Norsk",tid:25,desc:"Enkel kjøttdeiggryte med paprika og ris."},
+  pastaform:{niva:"Middels",kjokken:"Italiensk",tid:45,desc:"Gratinert pastaform med kjøttdeig og ostetopp fra ovnen."},
+  tacobowl:{niva:"Enkel",kjokken:"Meksikansk",tid:25,desc:"Alt det gode fra taco, servert i skål med ris."},
+  laks_pasta:{niva:"Middels",kjokken:"Italiensk",tid:30,desc:"Kremet laksepasta med squash — restaurantfølelse hjemme."},
+  torsk_ris:{niva:"Enkel",kjokken:"Norsk",tid:30,desc:"Dampet torsk med ris og grønnsaker — lett og sunt."},
+  kylling_poteter:{niva:"Enkel",kjokken:"Norsk",tid:45,desc:"Kyllingfilet med ovnspoteter og grønnsaker."},
+  svin_ris:{niva:"Enkel",kjokken:"Norsk",tid:30,desc:"Svinekotelett med ris og stekt paprika."},
+  stektris_egg:{niva:"Enkel",kjokken:"Kinesisk",tid:25,desc:"Stekt ris med egg og grønnsaker — rask og rimelig."},
+  vegtaco_linser:{niva:"Enkel",kjokken:"Meksikansk",tid:25,desc:"Vegetartaco med krydrede linser og friske tilbehør."},
+  pasta_kikerter:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Tomatpasta med kikerter — proteinrik og mettende."},
+  frittata:{niva:"Middels",kjokken:"Norsk",tid:40,desc:"Potetfrittata med ost — mettende og enkel fra ovnen."},
+  kyllingfajita:{niva:"Enkel",kjokken:"Meksikansk",tid:30,desc:"Sizzlende kyllingfajitas med paprika og løk i lefse."},
+  fiskesuppe:{niva:"Middels",kjokken:"Norsk",tid:40,desc:"Kremet fiskesuppe med laks og torsk — norsk kystmat."},
+  veg_pasta_tomat:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Vegansk tomatpasta med squash — enkel og smakfull."},
+  veg_pasta_linser:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Vegansk tomatpasta med røde linser for ekstra protein."},
+  veg_stektris:{niva:"Enkel",kjokken:"Kinesisk",tid:25,desc:"Vegansk stekt ris full av fargerike grønnsaker."},
+  veg_kikertcurry:{niva:"Enkel",kjokken:"Indisk",tid:35,desc:"Fyldig kikert- og potetcurry med kokos."},
+  veg_linsetaco:{niva:"Enkel",kjokken:"Meksikansk",tid:25,desc:"Vegansk taco med krydrede linser."},
+  veg_kikertwok:{niva:"Enkel",kjokken:"Kinesisk",tid:25,desc:"Rask kikertwok med squash og ris."},
+  veg_linsesuppe:{niva:"Enkel",kjokken:"Indisk",tid:30,desc:"Krydret linse- og kokossuppe som varmer."},
+  veg_kikertsalat:{niva:"Enkel",kjokken:"Gresk",tid:20,desc:"Frisk kikertsalat med cherrytomater — lett og proteinrik."},
+  veg_potetcurry:{niva:"Enkel",kjokken:"Indisk",tid:35,desc:"Mild potet- og grønnsakscurry med kokos."},
+  veg_tomatris:{niva:"Enkel",kjokken:"Norsk",tid:25,desc:"Smakfull tomatris med grønnsaker."},
+  veg_kikertwrap:{niva:"Enkel",kjokken:"Meksikansk",tid:20,desc:"Kikertwraps med sprø salat — rask og enkel."},
+  veg_squashpasta:{niva:"Enkel",kjokken:"Italiensk",tid:25,desc:"Enkel pasta med squash, hvitløk og cherrytomat."},
+  veg_gronnsakwok:{niva:"Enkel",kjokken:"Kinesisk",tid:25,desc:"Fargerik grønnsakswok med ris."},
+  veg_baktepoteter:{niva:"Enkel",kjokken:"Norsk",tid:45,desc:"Bakte poteter med kikerter og frisk salsa."},
+  tofu_wok:{niva:"Enkel",kjokken:"Thailandsk",tid:25,desc:"Sprøstekt tofu i wok med grønnsaker og ris."},
+  tofu_curry:{niva:"Enkel",kjokken:"Indisk",tid:35,desc:"Kremet tofukarri med kokos og ris."},
+  edamame_ris:{niva:"Enkel",kjokken:"Japansk",tid:25,desc:"Proteinrik edamame- og grønnsaksris."},
+  tofu_taco:{niva:"Enkel",kjokken:"Meksikansk",tid:30,desc:"Vegansk tofutaco med frisk salsa."},
+  protein_gryte:{niva:"Enkel",kjokken:"Indisk",tid:30,desc:"Proteinrik gryte med linser og edamame i kokostomat."},
+};
+RECIPES.forEach(r=>{ const m=RETT_META[r.id]; if(m){ r.niva=m.niva; r.kjokken=m.kjokken; r.tid=m.tid; r.beskrivelse=m.desc; } });
+
+// Allergener: hvilke råvarer inneholder hva. Grunnmur for allergifiltre — utvides når nye råvarer legges til.
+let ALLERGENER={
+  gluten:new Set(["pasta","tortilla"]),
+  melk:new Set(["melk","romme","revetOst","smor"]),
+  egg:new Set(["egg"]),
+  fisk:new Set(["laksefilet","torskefilet"]),
+  soya:new Set(["tofu","edamame"]),
+  nøtter:new Set([]),
+  skalldyr:new Set([]),
+  sesam:new Set([]),
+  selleri:new Set([]),
+};
+const ALLERGEN_LABEL={gluten:"Uten gluten",melk:"Uten melk",egg:"Uten egg",fisk:"Uten fisk",soya:"Uten soya",nøtter:"Uten nøtter",skalldyr:"Uten skalldyr",sesam:"Uten sesam",selleri:"Uten selleri"};
+// Hver rett får settet av allergener den inneholder.
+RECIPES.forEach(r=>{ r.allergener=new Set(); for(const a in ALLERGENER){ if(r.ing.some(([id])=>ALLERGENER[a].has(id))) r.allergener.add(a); } });
+
+// Rolle for allergen-bærende råvarer:
+//  "tilpassbar" = kan byttes til fri-for-variant eller sløyfes -> BEHOLD retten, gi varsel.
+//  "kritisk"    = retten faller uten den -> FILTRER retten bort, finn en annen.
+let ALLERGEN_ROLLE={
+  pasta:"tilpassbar", tortilla:"tilpassbar",                 // gluten: finnes glutenfrie varianter
+  melk:"tilpassbar", romme:"tilpassbar", revetOst:"tilpassbar", smor:"tilpassbar", // melk: finnes laktose-/melkefrie
+  egg:"kritisk",                                             // egg-baserte retter
+  laksefilet:"kritisk", torskefilet:"kritisk",               // fisken ER retten
+  tofu:"kritisk", edamame:"kritisk",                         // soya-proteinbase, ingen kjøpbar erstatning
+};
+// Unntak per rett (recipeId -> {råvareId: rolle}) — tom nå, brukes hvis en rett trenger annen vurdering.
+const ALLERGEN_ROLLE_UNNTAK={};
+function rolleFor(recipeId,ingId){
+  const u=ALLERGEN_ROLLE_UNNTAK[recipeId];
+  return (u&&u[ingId]) || ALLERGEN_ROLLE[ingId] || "kritisk";
+}
+// Allergen-type på oversiktsnivå (for merkelapper): kan hele allergenet alltid tilpasses, eller er det bærende?
+const ALLERGEN_TYPE={gluten:"tilpassbar",melk:"tilpassbar",nøtter:"tilpassbar",sesam:"tilpassbar",selleri:"tilpassbar",egg:"kritisk",fisk:"kritisk",soya:"kritisk",skalldyr:"kritisk"};
+// For en rett + unngå-liste: er den trygg (ingen kritiske allergener), og hvilke tilpassbare varsler gjelder?
+function recipeAllergyInfo(r,avoid){
+  let kritisk=false; const warn=[];
+  for(const [id] of r.ing){
+    for(const a of avoid){
+      if(ALLERGENER[a]&&ALLERGENER[a].has(id)){
+        if(rolleFor(r.id,id)==="kritisk") kritisk=true;
+        else warn.push({allergen:a,ing:ING[id].n});
+      }
+    }
+  }
+  return {safe:!kritisk, warn};
+}
+const STATS={};RECIPES.forEach(r=>STATS[r.id]=recipeStats(r));
+
+/* ---------- DATAKILDE: Supabase eller innebygd reserve ---------- */
+// Regner ut alt som utledes av rådataene (metadata, allergen-sett, næring/pris per rett).
+function mmBeregnAvledet(fraSupabase){
+  if(!fraSupabase){
+    RECIPES.forEach(r=>{ const m=RETT_META[r.id]; if(m){ r.niva=m.niva; r.kjokken=m.kjokken; r.tid=m.tid; r.beskrivelse=m.desc; } });
+  }
+  // Vegansk utledes alltid fra råvarene — samme sannhet uansett kilde, og selv-oppdaterende for nye retter.
+  RECIPES.forEach(r=>{ r.vegan = r.ing.every(([id])=> !ANIMALSK.has(id)); });
+  RECIPES.forEach(r=>{ r.allergener=new Set(); for(const a in ALLERGENER){ if(r.ing.some(([id])=>ALLERGENER[a].has(id))) r.allergener.add(a); } });
+  Object.keys(STATS).forEach(k=>delete STATS[k]);
+  RECIPES.forEach(r=>STATS[r.id]=recipeStats(r));
+}
+
+// Bytter ut innebygde data med rader hentet fra Supabase.
+window.mmApplyData=function(ingRader,rettRader,koblinger){
+  const nyING={};
+  ingRader.forEach(r=>{
+    nyING[r.id]={n:r.navn,kat:r.kategori,kcal:Number(r.kcal),p:Number(r.protein),k:Number(r.karbo),
+                 f:Number(r.fett),pg:Number(r.pakke_gram),pris:Number(r.pris),pk:r.pakke_tekst,los:!!r.losvekt,
+                 eg:r.enhet_gram?Number(r.enhet_gram):null,en:r.enhet_navn||null,ef:r.enhet_flertall||null};
+  });
+  const nyAll={gluten:new Set(),melk:new Set(),egg:new Set(),fisk:new Set(),soya:new Set(),
+               "nøtter":new Set(),skalldyr:new Set(),sesam:new Set(),selleri:new Set()};
+  const nyRolle={};
+  ingRader.forEach(r=>{
+    (r.allergener||[]).forEach(a=>{ if(!nyAll[a]) nyAll[a]=new Set(); nyAll[a].add(r.id); });
+    if(r.allergen_rolle) nyRolle[r.id]=r.allergen_rolle;
+  });
+  const perRett={};
+  koblinger.forEach(k=>{ (perRett[k.rett_id]=perRett[k.rett_id]||[]).push([k.ingrediens_id,Number(k.gram)]); });
+  const nyRETTER=rettRader.map(r=>({
+    id:r.id,navn:r.navn,tag:r.tag,veg:!!r.veg,vegan:!!r.vegan,
+    niva:r.niva,kjokken:r.kjokken,tid:r.tid,beskrivelse:r.beskrivelse,
+    fremgangsmate:r.fremgangsmate||null, ing:perRett[r.id]||[]
+  })).filter(r=>r.ing.length>0 && r.ing.every(([id])=>nyING[id]));
+
+  if(!Object.keys(nyING).length || !nyRETTER.length) return false; // ufullstendig -> behold reserve
+  ING=nyING; RECIPES=nyRETTER; ALLERGENER=nyAll; ALLERGEN_ROLLE=nyRolle;
+  mmBeregnAvledet(true);
+  return true;
+};
+
+// Starter appen (kalles når data er klare — enten fra Supabase eller reserve).
+let mmStartet=false;
+window.mmStartApp=async function(kilde){
+  if(mmStartet) return; mmStartet=true;
+  window.MM_DATAKILDE=kilde||"reserve";
+  try{ state.current=await buildPlan(state); render(); }
+  catch(e){ console.error("Kunne ikke lage meny:",e);
+    document.getElementById("results").innerHTML='<div class="loading">Noe gikk galt ved oppstart. Last siden på nytt.</div>'; }
+};
+function perDinnerTarget(daily){return {kcal:daily.kcal*DINNER_SHARE,p:daily.p*DINNER_SHARE,k:daily.k*DINNER_SHARE,f:daily.f*DINNER_SHARE};}
+function scoreRecipe(r,pref,daily){
+  const st=STATS[r.id],t=perDinnerTarget(daily);
+  switch(pref){
+    case "protein":return st.p+(st.p/Math.max(st.kcal,1))*220;
+    case "karbo":return -st.k;
+    case "billig":return -st.cost;
+    default:return -(Math.abs(st.p-t.p)+Math.abs(st.k-t.k)*0.7+Math.abs(st.f-t.f)*1.2);
+  }
+}
+
+/* ---------- CLAUDE-TOLKNING ---------- */
+async function interpretWithClaude(text){
+  // Kaller vår egen Netlify Function — ikke Anthropic direkte.
+  // Funksjonen snakker med Claude på serversiden med en hemmelig API-nøkkel.
+  const res = await fetch("/.netlify/functions/interpret",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({text})
+  });
+  if(!res.ok) throw new Error("Function "+res.status);
+  const data = await res.json();
+  if(!data || typeof data.raw!=="string") throw new Error("Tomt svar fra funksjon");
+  const obj = JSON.parse(data.raw);
+  return normalize(obj,"claude");
+}
+const DAY_INDEX={mandag:0,tirsdag:1,onsdag:2,torsdag:3,fredag:4,"lørdag":5,"søndag":6};
+function validateConstraints(c){
+  const out={pinned:[],tagMin:[]};
+  if(!c||typeof c!=="object") return out;
+  const validId=new Set(RECIPES.map(r=>r.id));
+  const validTag=new Set(RECIPES.map(r=>r.tag));
+  if(Array.isArray(c.pinned)){
+    for(const p of c.pinned){
+      if(!p) continue;
+      const day=(p.day||"").toLowerCase();
+      if(validId.has(p.recipeId) && day in DAY_INDEX) out.pinned.push({day,recipeId:p.recipeId});
+    }
+  }
+  if(Array.isArray(c.tagMin)){
+    for(const t of c.tagMin){
+      if(!t||!validTag.has(t.tag)) continue;
+      const n=Math.max(1,Math.min(7,parseInt(t.count,10)||1));
+      out.tagMin.push({tag:t.tag,count:n});
+    }
+  }
+  return out;
+}
+function normalize(o,source){
+  const goals=["muskler","ned","holde"], prefs=["protein","karbo","billig","balansert"];
+  const validAllergen=new Set(["gluten","melk","egg","fisk","soya","nøtter","skalldyr","sesam","selleri"]);
+  const goal = goals.includes(o.goal)?o.goal:"holde";
+  const pref = prefs.includes(o.preference)?o.preference:"balansert";
+  const clamp=(v,lo,hi,d)=>{ v=Number(v); return isFinite(v)?Math.min(hi,Math.max(lo,v)):d; };
+  const avoid = Array.isArray(o.avoid) ? [...new Set(o.avoid.map(a=>String(a).toLowerCase()).filter(a=>validAllergen.has(a)))] : [];
+  return {
+    goal, preference:pref, vegOnly:(!!o.vegOnly||!!o.veganOnly), veganOnly:!!o.veganOnly, avoid,
+    kcal:clamp(o.kcal,1200,4000,GOAL_TARGET[goal].kcal),
+    p:clamp(o.protein,60,260,GOAL_TARGET[goal].p),
+    k:clamp(o.carbs,50,520,GOAL_TARGET[goal].k),
+    f:clamp(o.fat,30,170,GOAL_TARGET[goal].f),
+    note:(typeof o.note==="string"&&o.note.trim())?o.note.trim():null,
+    constraints:validateConstraints(o.constraints),
+    source
+  };
+}
+/* Deterministisk allergi-skann — brukes både som fallback OG som sikkerhetsnett etter Claude. */
+function detectAllergies(text){
+  const t=(text||"").toLowerCase(); const a=[];
+  if(/(glutenfri|gluten|cøliaki|coliaki|cøliak)/.test(t)) a.push("gluten");
+  if(/(laktose|melkeallergi|melkefri|uten melk|meierifri|meieriprodukt)/.test(t)) a.push("melk");
+  if(/(eggallergi|uten egg|eggfri)/.test(t)) a.push("egg");
+  if(/(fiskeallergi|uten fisk|fiskefri)/.test(t)) a.push("fisk");
+  if(/(soyaallergi|soya|uten soya)/.test(t)) a.push("soya");
+  if(/(nøtteallergi|notteallergi|uten nøtter|peanøtt|nøttefri)/.test(t)) a.push("nøtter");
+  return a;
+}
+/* Deterministisk diett-leser (sikkerhetsnett, som allergier). Skiller de tre tilfellene:
+   'vegansk' = kun vegansk · 'vegetar' = kjøttfri MEN ikke vegansk · 'begge' = alt kjøttfritt. */
+function detectDiet(text){
+  const t=(text||"").toLowerCase();
+  const harVegan=/(vegansk|veganer|vegan|plantebasert|helt plantebasert|uten animalsk)/.test(t);
+  const harVegetar=/(vegetar|vegetarian|kjøttfri|kjottfri|uten kjøtt|uten kjott|kjøttfritt|kjottfritt)/.test(t);
+  if(harVegan && harVegetar) return "begge";
+  if(harVegan) return "vegansk";
+  if(harVegetar) return "vegetar";
+  return null;
+}
+/* regelbasert fallback (hvis API utilgjengelig, f.eks offline-deploy) */
+function interpretLocal(text,state){
+  const t=(text||"").toLowerCase(); let goal=null,pref=null,vegOnly=false,veganOnly=false;
+  if(/(vegansk|veganer|vegan|plantebasert|helt plantebasert|uten animalsk)/.test(t)){ veganOnly=true; vegOnly=true; }
+  else if(/(vegetar|kjøttfri|kjottfri|uten kjøtt|uten kjott)/.test(t)) vegOnly=true;
+  if(/(muskl|styrke|bygge|løfte|lofte|gym|masse|protein)/.test(t)){goal="muskler";pref="protein";}
+  if(/(ned i vekt|gå ned|ga ned|slank|kalori|deficit|underskudd)/.test(t)) goal="ned";
+  if(/(løp|lop|kondis|sykl|sykk|maraton|utholden)/.test(t)){ if(!goal)goal="holde"; }
+  if(/(billig|spare|student|stram|rimelig|lite penger|økonom|okonom)/.test(t)) pref="billig";
+  const avoid=detectAllergies(text);
+  goal=goal||state.goal; pref=pref||state.pref;
+  const g=GOAL_TARGET[goal];
+  return {goal,preference:pref,vegOnly,veganOnly,avoid,kcal:g.kcal,p:g.p,k:g.k,f:g.f,
+    note:"Tolket lokalt uten Claude (offline-fallback).",constraints:{pinned:[],tagMin:[]},source:"regel"};
+}
+
+/* ---------- GENERER PLAN ---------- */
+async function buildPlan(state){
+  if(window.MM_resetWeekSession) window.MM_resetWeekSession();
+  let interp;
+  // Fast profiltekst + det brukeren skriver denne gangen, sendes samlet til Claude.
+  const parts=[profileContext, state.freeText].map(s=>(s||"").trim()).filter(Boolean);
+  const text=parts.join("\n\n");
+  if(text){
+    try{ interp = await interpretWithClaude(text); }
+    catch(e){ console.warn("Claude utilgjengelig:",e); interp = interpretLocal(text,state); }
+  } else {
+    const g=GOAL_TARGET[state.goal];
+    interp={goal:state.goal,preference:state.pref,vegOnly:false,veganOnly:false,kcal:g.kcal,p:g.p,k:g.k,f:g.f,note:null,constraints:{pinned:[],tagMin:[]},source:"valg"};
+  }
+  const daily={kcal:interp.kcal,p:interp.p,k:interp.k,f:interp.f};
+  // Sikkerhetsnett: allergier er for viktig til å overlate til AI alene. Skann teksten og legg alltid til det vi finner.
+  if(text){ const scanned=detectAllergies(text); if(scanned.length){ interp.avoid=[...new Set([...(interp.avoid||[]), ...scanned])]; } }
+  const pref=interp.preference, vegOnly=interp.vegOnly, veganOnly=interp.veganOnly;
+  const cons=interp.constraints||{pinned:[],tagMin:[]};
+  const N=state.dinners, maxPerTag=Math.max(2,Math.ceil(N/3));
+
+  // Diett: deterministisk lesing av teksten er autoritet (som allergier). Claude er mild reserve når teksten ikke sier noe eksplisitt.
+  let dietMode=detectDiet(text);
+  if(!dietMode && veganOnly) dietMode="vegansk";
+  else if(!dietMode && vegOnly) dietMode="begge";
+  // 'vegansk' = kun vegansk · 'vegetar' = kjøttfri men IKKE vegansk · 'begge' = alt kjøttfritt · ellers alt.
+  const dietOk=r=> dietMode==="vegansk" ? r.vegan
+                 : dietMode==="vegetar" ? (r.veg && !r.vegan)
+                 : dietMode==="begge"   ? r.veg
+                 : true;
+  // Allergi-sjekk: bærende allergen -> retten er utrygg (filtreres bort). Tilpassbart -> behold, varsle.
+  const avoid=Array.isArray(interp.avoid)?interp.avoid.filter(a=>a in ALLERGENER):[];
+  const allergyOk=r=> recipeAllergyInfo(r,avoid).safe;
+  const ok=r=> dietOk(r) && allergyOk(r);
+  // Brukerens filter (vanskelighet, tid, kjøkken). Tak-verdier på topp = ingen påvirkning.
+  const NIVA_RANK={Enkel:1,Middels:2,Vanskelig:3,Ekspert:4};
+  const fNiva=Number(state.fNiva)||4, fTid=Number(state.fTid)||90, fKj=Array.isArray(state.fKjokken)?state.fKjokken:[];
+  const filterOk=r=> (NIVA_RANK[r.niva]||1)<=fNiva && (!r.tid||r.tid<=fTid) && (fKj.length===0||fKj.includes(r.kjokken));
+  const okF=r=> ok(r) && filterOk(r);
+  // Poolen til frie valg respekterer diett, allergier og filter; låste retter sjekkes mot samme regel.
+  const pool=RECIPES.filter(okF);
+  const warn = pool.length===0 ? "tom" : (pool.length<N ? "faa" : null);
+  // Ingen trygge retter i det hele tatt -> ikke server noe utrygt; gi tydelig beskjed i stedet.
+  if(pool.length===0){
+    return {plan:[],goal:interp.goal,pref,vegOnly,veganOnly,dietMode,avoid,warn:"tom",daily,note:interp.note,constraints:cons,source:interp.source};
+  }
+  const ss=pool.map(r=>scoreRecipe(r,pref,daily));
+  const spenn=(Math.max(...ss)-Math.min(...ss))||1;
+  const jitter=spenn*0.35;
+  // Bruker du «har hjemme», løftes retter som utnytter varene dine.
+  const hjemmeVekt = state.brukHarHjemme ? spenn*1.5 : 0;
+  const scoreOf=r=>scoreRecipe(r,pref,daily)+(Math.random()-0.5)*jitter
+    +(hjemmeVekt?pantryDekning(r)*hjemmeVekt:0)
+    -(recentRecipeIds.has(r.id)?1e6:0);
+
+  const slots=new Array(N).fill(null);
+  const used=new Set();
+  const firstFree=()=>{ for(let i=0;i<N;i++) if(slots[i]===null) return i; return -1; };
+
+  // 1) Lås retter til bestemte dager (taco på fredag osv.)
+  for(const p of cons.pinned){
+    const r=RECIPES.find(x=>x.id===p.recipeId);
+    if(!r||used.has(r.id)||!ok(r)) continue;
+    let idx=DAY_INDEX[p.day];
+    if(idx==null||idx>=N||slots[idx]!==null) idx=firstFree();
+    if(idx<0) continue;
+    slots[idx]=r; used.add(r.id);
+  }
+
+  // 2) Oppfyll antallskrav per type (f.eks. minst to fiskemåltider)
+  for(const tm of cons.tagMin){
+    let have=slots.filter(r=>r&&r.tag===tm.tag).length;
+    let need=tm.count-have;
+    if(need<=0) continue;
+    const cands=pool.filter(r=>r.tag===tm.tag&&!used.has(r.id)).map(r=>({r,s:scoreOf(r)})).sort((a,b)=>b.s-a.s);
+    for(const c of cands){ if(need<=0)break; const slot=firstFree(); if(slot<0)break; slots[slot]=c.r; used.add(c.r.id); need--; }
+  }
+
+  // 3) Fyll resten etter skår, med variasjon på type.
+  //    Et eksplisitt antallskrav (tagMin) fungerer også som tak, så "to fisk" = akkurat to.
+  const tagCap={}; cons.tagMin.forEach(tm=>{ tagCap[tm.tag]=tm.count; });
+  const capFor=tag=> (tag in tagCap) ? tagCap[tag] : maxPerTag;
+  const tagCount={}; slots.forEach(r=>{ if(r) tagCount[r.tag]=(tagCount[r.tag]||0)+1; });
+  const ranked=pool.filter(r=>!used.has(r.id)).map(r=>({r,s:scoreOf(r)})).sort((a,b)=>b.s-a.s);
+  for(const c of ranked){ const slot=firstFree(); if(slot<0)break; if((tagCount[c.r.tag]||0)>=capFor(c.r.tag))continue; slots[slot]=c.r; used.add(c.r.id); tagCount[c.r.tag]=(tagCount[c.r.tag]||0)+1; }
+
+  // 4) Hvis variasjonsregelen lot noen slots stå tomme: fyll med rester, til slutt gjentakelser
+  for(let i=0;i<N;i++){
+    if(slots[i]!==null) continue;
+    let r=pool.find(x=>!used.has(x.id));
+    if(!r) r=pool[Math.floor(Math.random()*pool.length)];
+    slots[i]=r; if(r) used.add(r.id);
+  }
+
+  // Samle varsler for tilpassbare allergener i de valgte rettene (til OBS-boksen).
+  const advarsler={};
+  slots.forEach(r=>{ if(!r) return; recipeAllergyInfo(r,avoid).warn.forEach(w=>{
+    (advarsler[w.allergen]=advarsler[w.allergen]||new Set()).add(`${r.navn} (${w.ing})`);
+  }); });
+  const advarslerObj={}; Object.keys(advarsler).forEach(a=>advarslerObj[a]=[...advarsler[a]]);
+
+  return {plan:slots,goal:interp.goal,pref,vegOnly,veganOnly,dietMode,avoid,warn,advarsler:advarslerObj,daily,note:interp.note,constraints:cons,source:interp.source};
+}
+
+/* ---------- HANDLELISTE ---------- */
+// Hybrid: løsvarer (grønnsaker, kjøtt, fisk) prises eksakt etter gram — du kjøper det du trenger.
+// Faste pakker (bokser, poser, kartonger) rundes opp til hele pakker — de kan ikke deles.
+// Løser over-kjøp-problemet (350 g løk skal ikke bli «1 kg»). Nicklas' og pappas løsning.
+function pentGram(g){
+  const r=Math.round(g);
+  if(r>=1000){ const kg=r/1000; return (kg%1===0?kg:kg.toFixed(1).replace(".",","))+" kg"; }
+  return r+" g";
+}
+function buildShopping(plan,persons){
+  const factor=persons/BASE_SERV,grams={};
+  plan.forEach(r=>r.ing.forEach(([id,g])=>{grams[id]=(grams[id]||0)+g*factor;}));
+  const lines=[];let total=0,spart=0;const dekket=[],brukt={};
+  const bruk=!!state.brukHarHjemme;
+  const ids=Object.keys(grams).sort((a,b)=>ING[a].kat.localeCompare(ING[b].kat)||ING[a].n.localeCompare(ING[b].n));
+  for(const id of ids){
+    const it=ING[id], need=grams[id];
+    const los=!!it.los, perGram=it.pris/it.pg;
+    const har = bruk ? Math.min(harHjemme[id]||0, need) : 0;   // felles lager for hele uka
+    if(har>0) brukt[id]=har;
+    const rest = Math.max(0, need-har);
+    const utenHjemme = los ? (it.eg ? Math.max(1,Math.ceil(need/it.eg))*it.eg*perGram : need*perGram)
+                           : Math.max(1,Math.ceil(need/it.pg))*it.pris;
+    if(rest<=0){                                   // du har nok — ingen kjøp
+      dekket.push({navn:it.n, brukt:har});
+      spart += utenHjemme;
+      continue;
+    }
+    let packs,cost,mengde;
+    if(los){
+      if(it.eg){                                              // telles i stk: 287 g løk -> 3 løk
+        const stk=Math.max(1,Math.ceil(rest/it.eg));
+        packs=stk; cost=stk*it.eg*perGram;
+        mengde=stk+" "+(stk===1?(it.en||"stk"):(it.ef||it.en||"stk"));
+      }else{
+        packs=1; cost=rest*perGram; mengde=pentGram(rest);     // etter vekt: kjøtt, fisk, sopp
+      }
+    }else{
+      packs=Math.max(1,Math.ceil(rest/it.pg)); cost=packs*it.pris; mengde=null;
+    }
+    const packsUten=los?1:Math.max(1,Math.ceil(need/it.pg));
+    total+=cost;
+    if(har>0) spart += Math.max(0, utenHjemme-cost);
+    lines.push({navn:it.n,packs,pk:it.pk,cost,los,mengde,fraHjemme:(har>0&&(los||packs<packsUten))?har:0});
+  }
+  return {lines,total,dekket,spart,brukt};
+}
+
+/* ---------- TILSTAND ---------- */
+const state={goal:"holde",dinners:5,persons:2,pref:"balansert",freeText:"",fNiva:4,fTidLvl:5,fTid:90,fKjokken:[],brukHarHjemme:false,current:null};
+let profileContext="";  // fast "om meg/familien"-tekst fra profilen, tas med i hver planlegging
+let recentRecipeIds=new Set();  // retter fra nylig lagrede menyer — straffes så de ikke gjentas
+let harHjemme={};       // {ingrediens_id: gram} — brukerens varebeholdning fra profilen
+
+// Andel (0–1) av rettens råvarekostnad som allerede dekkes av det du har hjemme.
+// Grovt anslag brukt til å prioritere retter; handlelista regner eksakt.
+function pantryDekning(r){
+  if(!Object.keys(harHjemme).length) return 0;
+  let sum=0, dekket=0;
+  for(const [id,g] of r.ing){
+    const it=ING[id]; if(!it) continue;
+    const kr=g*(it.pris/it.pg);
+    sum+=kr;
+    const har=harHjemme[id]||0;
+    if(har>0) dekket += kr*Math.min(1, har/g);
+  }
+  return sum>0 ? dekket/sum : 0;
+}
+
+/* ---------- RENDER ---------- */
+function fmt(n){return Math.round(n);}
+function macroGrid(st){
+  return `<div class="macros">
+    <div class="macro"><span class="m-v num">${fmt(st.kcal)}</span><span class="m-k">kcal</span></div>
+    <div class="macro p"><span class="m-v num">${fmt(st.p)} g</span><span class="m-k">Protein</span></div>
+    <div class="macro k"><span class="m-v num">${fmt(st.k)} g</span><span class="m-k">Karbo</span></div>
+    <div class="macro f"><span class="m-v num">${fmt(st.f)} g</span><span class="m-k">Fett</span></div></div>`;
+}
+function goalLabel(g){return {muskler:"bygge muskler",ned:"gå ned i vekt",holde:"holde vekten"}[g];}
+function prefLabel(p){return {protein:"mest protein",karbo:"lite karbo",billig:"billigst",balansert:"balansert"}[p];}
+function macroBar(name,val,target,color){
+  const max=Math.max(val,target)*1.25||1,w=Math.min(100,(val/max)*100),tx=Math.min(100,(target/max)*100);
+  return `<div class="bar"><div class="row"><span class="name">${name}</span><span class="val num">${fmt(val)} g / mål ${fmt(target)} g</span></div>
+    <div class="track"><div class="fill" style="width:${w}%;background:${color}"></div><div class="target-mark" style="left:${tx}%"></div></div></div>`;
+}
+
+/* ---------- MINE UKER: full visning av en lagret uke ---------- */
+window.MM_buildWeekHTML=function(ids,persons,uid){
+  const plan=(ids||[]).map(id=>RECIPES.find(r=>r.id===id)).filter(Boolean);
+  const missing=(ids||[]).length-plan.length;
+  if(!plan.length) return `<div class="wk-empty">Rettene i denne uka finnes ikke lenger i databasen.</div>`;
+  const p=Math.max(1,Number(persons)||2);
+  const meals=plan.map(r=>{
+    const s=STATS[r.id]||{kcal:0,p:0,k:0,f:0};
+    return `<div class="meal wk-meal"><div class="body">
+      <div class="title">${r.navn}<span class="tagdot">${r.vegan?"Vegansk":(TAG_LABEL[r.tag]||r.tag)}</span></div>
+      ${(r.niva||r.kjokken||r.tid)?`<div class="rmeta">${[r.niva,r.kjokken,r.tid?r.tid+" min":null].filter(Boolean).join(" · ")}</div>`:""}
+      ${macroGrid(s)}<div class="ingredients">${r.ing.map(([id])=>ING[id]?ING[id].n:id).join(" · ")}</div>
+      <div class="foot"><button class="recipe-btn" data-wkrecipe="${r.id}">Vis oppskrift</button></div>
+      <div class="recipe-panel" id="wkRecipe-${uid}-${r.id}"></div>
+    </div></div>`;
+  }).join("");
+  // Handlelista vises uten «Har hjemme»-fratrekk: beholdningen kan ha endret seg siden uka ble lagret.
+  const prev=state.brukHarHjemme; state.brukHarHjemme=false;
+  const shop=buildShopping(plan,p);
+  state.brukHarHjemme=prev;
+  const rows=shop.lines.map(l=>`<div class="r-line"><span class="r-name">${l.navn}${l.los?` <small>${l.mengde}</small>`:(l.packs>1?` <small>${l.packs} × ${l.pk}</small>`:` <small>${l.pk}</small>`)}</span><span class="r-lead"></span><span class="r-price">${fmt(l.cost)} kr</span></div>`).join("");
+  return `${missing>0?`<div class="wk-empty" style="margin-bottom:12px;">${missing} rett${missing>1?"er":""} fra denne uka finnes ikke lenger i databasen og vises ikke.</div>`:""}
+    <div class="wk-meals">${meals}</div>
+    <div class="section-h" style="margin-top:18px;"><h2>Handleliste</h2><span class="meta">${shop.lines.length} varer · ${p} pers</span></div>
+    <div class="receipt"><div class="r-head"><div class="store">Vekes</div><div class="sub">Handleliste · veiledende priser</div></div>
+    ${rows}<div class="r-total"><span class="t-lab">TOTALT</span><span class="t-val num">${fmt(shop.total)} kr</span></div></div>`;
+};
+
+// Beregner hvor mye av beholdningen en lagret uke bruker («Bruk denne menyen» i Mine uker).
+// Regner mot beholdningen slik den er NÅ — man kan bare bruke det man faktisk har.
+window.MM_shopBrukt=function(ids,persons){
+  const plan=(ids||[]).map(id=>RECIPES.find(r=>r.id===id)).filter(Boolean);
+  if(!plan.length) return {};
+  const prev=state.brukHarHjemme; state.brukHarHjemme=true;
+  const shop=buildShopping(plan,Math.max(1,Number(persons)||2));
+  state.brukHarHjemme=prev;
+  return shop.brukt||{};
+};
+
+// Laster en lagret uke inn på arbeidsflaten for redigering. Diett/allergier gjenopprettes
+// fra ukas meta, så «Bytt rett» respekterer de samme reglene som da uka ble laget.
+window.MM_loadWeekForEdit=function(ids,meta,navn){
+  const plan=(ids||[]).map(id=>RECIPES.find(r=>r.id===id)).filter(Boolean);
+  if(!plan.length) return false;
+  meta=meta||{};
+  state.dinners=Math.min(7,Math.max(3,plan.length));
+  state.persons=Math.min(6,Math.max(1,Number(meta.persons)||state.persons));
+  const dv=document.getElementById("dinnersVal"); if(dv) dv.textContent=state.dinners;
+  const pv=document.getElementById("personsVal"); if(pv) pv.textContent=state.persons;
+  const g=GOAL_TARGET[state.goal];
+  state.current={
+    plan,
+    goal:state.goal, pref:state.pref,
+    dietMode:meta.dietMode||null,
+    avoid:Array.isArray(meta.avoid)?meta.avoid:[],
+    vegOnly:false, veganOnly:false,
+    daily:{kcal:g.kcal,p:g.p,k:g.k,f:g.f},
+    note:null, warn:null, advarsler:{}, constraints:{pinned:[],tagMin:[]},
+    source:"lagret"
+  };
+  window.MM_editingWeek=true;
+  window.MM_editingWeekName=(navn||"").trim()||null;
+  render();
+  return true;
+};
+
+function showLoading(){
+  const el=document.getElementById("results");
+  el.innerHTML=`<div class="loading"><span class="spinner"></span> Claude leser hverdagen din og setter målene…</div>`;
+}
+function render(){
+  const {plan,goal,pref,daily,note,source,vegOnly,veganOnly,avoid,warn,advarsler,constraints}=state.current,persons=state.persons,N=plan.length;
+
+  // Ingen trygge retter (for streng kombinasjon av diett/allergier) -> tydelig beskjed, ingen utrygg mat.
+  if(!plan.length){
+    const el0=document.getElementById("results");
+    el0.innerHTML=`<div class="loading" style="display:block">Fant ingen retter som passer alle valgene dine samtidig${(avoid&&avoid.length)?` (unngår: ${avoid.map(a=>ALLERGEN_LABEL[a]?.replace("Uten ","").toLowerCase()||a).join(", ")})`:""}. Prøv å fjerne én begrensning, så finner vi en meny.</div>`;
+    return;
+  }
+
+  const avg={kcal:0,p:0,k:0,f:0};
+  plan.forEach(r=>{const s=STATS[r.id];avg.kcal+=s.kcal;avg.p+=s.p;avg.k+=s.k;avg.f+=s.f;});
+  Object.keys(avg).forEach(k=>avg[k]/=N);
+  const shop=buildShopping(plan,persons),perPortion=shop.total/(persons*N),t=perDinnerTarget(daily);
+  const el=document.getElementById("results");el.innerHTML="";
+
+  // AI-tolkning (kun når fritekst ble brukt)
+  if(source==="claude"||source==="regel"){
+    const box=document.createElement("div");
+    box.className="ai-read anim"+(source==="regel"?" fallback":"");
+    const labTxt=source==="claude"?"Tolket av Claude":"Tolket lokalt — Claude var utilgjengelig";
+    const chips=[goalLabel(goal),`≈${fmt(daily.kcal)} kcal/dag`,`${fmt(daily.p)} g protein/dag`,prefLabel(pref)];
+    if(veganOnly)chips.push("Kun vegansk"); else if(vegOnly)chips.push("Kun vegetar");
+    if(avoid&&avoid.length) avoid.forEach(a=>{
+      if(ALLERGEN_TYPE[a]==="tilpassbar") chips.push("Tilpasset: "+a);
+      else chips.push(ALLERGEN_LABEL[a]||("Uten "+a));
+    });
+    if(constraints){
+      const capDay=d=>d.charAt(0).toUpperCase()+d.slice(1);
+      constraints.pinned.forEach(p=>{ const r=RECIPES.find(x=>x.id===p.recipeId); if(r) chips.push(`✓ ${capDay(p.day)}: ${r.navn}`); });
+      constraints.tagMin.forEach(tm=>chips.push(`✓ ${tm.count}× ${TAG_LABEL[tm.tag]||tm.tag}`));
+    }
+    box.innerHTML=`<div class="lab"><span class="dot"></span>${labTxt}</div>
+      ${note?`<div class="note">${note}</div>`:""}
+      ${warn==="faa"?`<div class="note" style="color:var(--kroner)">Få retter passer alle valgene dine, så noen retter gjentas denne uka.</div>`:""}
+      <div class="chips">${chips.map(c=>`<span class="chip">${c}</span>`).join("")}</div>`;
+    el.appendChild(box);
+  }
+
+  // OBS-boks: tilpassbare allergener i menyen (kjøp fri-for-varianter / utelat ingrediens).
+  if(advarsler && Object.keys(advarsler).length){
+    const navnFor={gluten:"gluten",melk:"melk/laktose",nøtter:"nøtter",sesam:"sesam",selleri:"selleri"};
+    const lines=Object.keys(advarsler).map(a=>`<div class="obs-line"><b>${navnFor[a]||a}:</b> ${advarsler[a].join(", ")}</div>`).join("");
+    const obs=document.createElement("div");obs.className="obs anim";
+    obs.innerHTML=`<div class="obs-title">⚠️ OBS – tilpass innkjøpene dine</div>
+      <div class="obs-body">Noen retter inneholder ingredienser du må bytte til «fri-for»-varianter eller utelate. Kjøp egnede alternativer av disse varene:</div>
+      ${lines}
+      <div class="obs-price">Merk: prisen på tilpassede varer kan avvike noe fra det som vises i handlelista.</div>`;
+    el.appendChild(obs);
+  }
+
+  const tiles=document.createElement("div");tiles.className="tiles anim";
+  tiles.innerHTML=`
+    <div class="tile"><div class="k">Ø kcal / middag</div><div class="v num">${fmt(avg.kcal)}</div><div class="u">per porsjon</div></div>
+    <div class="tile"><div class="k">Ø protein</div><div class="v num">${fmt(avg.p)} g</div><div class="u">per porsjon</div></div>
+    <div class="tile kr"><div class="k">Handlekostnad</div><div class="v num">${fmt(shop.total)}</div><div class="u">kr for hele uka</div></div>
+    <div class="tile kr"><div class="k">Pris / porsjon</div><div class="v num">${fmt(perPortion)}</div><div class="u">kr per middag</div></div>`;
+  el.appendChild(tiles);
+
+  const tgt=document.createElement("div");tgt.className="target anim";
+  tgt.innerHTML=`<h3>Snitt per middag mot målet ditt</h3>
+    <div class="sub">Strek = anbefalt nivå per middag for «${goalLabel(goal)}». Søyle = det menyen faktisk gir.</div>
+    ${macroBar("Protein",avg.p,t.p,"var(--spruce-2)")}
+    ${macroBar("Karbo",avg.k,t.k,"var(--karbo)")}
+    ${macroBar("Fett",avg.f,t.f,"var(--fett)")}`;
+  el.appendChild(tgt);
+
+  const sh=document.createElement("div");sh.className="section-h anim";
+  sh.innerHTML=`<h2>Ukens middager</h2><span class="meta">${N} middager · ${persons} pers · ${prefLabel(pref)}</span>`;
+  el.appendChild(sh);
+
+  const week=document.createElement("div");week.className="week";
+  plan.forEach((r,idx)=>{
+    const s=STATS[r.id],card=document.createElement("div");card.className="meal anim";card.style.animationDelay=(idx*0.04)+"s";
+    card.innerHTML=`<div class="day"><span class="d">${DAYS[idx].slice(0,3)}</span><span class="n">${DAYS[idx]}</span></div>
+      <div class="body"><div class="title">${r.navn}<span class="tagdot">${r.vegan?"Vegansk":TAG_LABEL[r.tag]}</span></div>
+      ${(r.niva||r.kjokken||r.tid)?`<div class="rmeta">${[r.niva,r.kjokken,r.tid?r.tid+" min":null].filter(Boolean).join(" · ")}</div>`:""}
+      ${r.beskrivelse?`<div class="rdesc">${r.beskrivelse}</div>`:""}
+      ${macroGrid(s)}<div class="ingredients">${r.ing.map(([id])=>ING[id].n).join(" · ")}</div>
+      <div class="foot"><button class="recipe-btn" data-idx="${idx}">Vis oppskrift</button><button class="swap" data-idx="${idx}">↺ Bytt rett</button></div>
+      <div class="recipe-panel" id="recipe-${idx}"></div></div>`;
+    week.appendChild(card);
+  });
+  el.appendChild(week);
+
+  const useBar=document.createElement("div");useBar.className="use-menu-bar anim";
+  const trekkerFra = state.brukHarHjemme && Object.keys(shop.brukt||{}).length>0;
+  const useHint = window.MM_editingWeek
+    ? `Du redigerer ${window.MM_editingWeekName?"«"+escapeHtml(window.MM_editingWeekName)+"»":"en lagret uke"} — «Lagre meny» oppdaterer den lagrede uka.`
+    : "Lagrer uka i «Mine uker», der den ligger trygt til du skal handle og lage maten — også om du lukker siden.";
+  useBar.innerHTML=`<button class="use-menu" id="useMenuBtn">Lagre meny</button><span class="use-menu-hint">${useHint}</span>`;
+  el.appendChild(useBar);
+
+  const umb=document.getElementById("useMenuBtn");
+  if(umb) umb.addEventListener("click",async()=>{
+    const ids=plan.map(r=>r.id);
+    const meta={persons:state.persons, dietMode:state.current.dietMode||null, avoid:Array.isArray(state.current.avoid)?state.current.avoid:[], brukHjemme:!!trekkerFra};
+    umb.disabled=true; umb.textContent="Lagrer …";
+    const res = window.MM_saveWeek ? await window.MM_saveWeek(ids,meta) : {ok:false};
+    if(res&&res.ok){
+      umb.textContent = res.status==="aktiv" ? "✓ Lagret som aktiv uke" : res.status==="planlagt" ? "✓ Lagret som planlagt uke" : "✓ Uka er oppdatert";
+    }
+    else if(res&&res.reason==="login"){ umb.textContent="Lagre meny"; umb.disabled=false; }
+    else { umb.textContent="Kunne ikke lagre — prøv igjen"; setTimeout(()=>{umb.textContent="Lagre meny";umb.disabled=false;},1800); }
+  });
+
+  const sh2=document.createElement("div");sh2.className="section-h anim";
+  sh2.innerHTML=`<h2>Handleliste</h2><span class="meta">${shop.lines.length} varer</span>`;el.appendChild(sh2);
+  const rec=document.createElement("div");rec.className="receipt anim";
+  const rows=shop.lines.map(l=>`<div class="r-line"><span class="r-name">${l.navn}${l.fraHjemme?" <em>(delvis hjemme)</em>":""}${l.los?` <small>${l.mengde}</small>`:(l.packs>1?` <small>${l.packs} × ${l.pk}</small>`:` <small>${l.pk}</small>`)}</span><span class="r-lead"></span><span class="r-price">${fmt(l.cost)} kr</span></div>`).join("");
+  rec.innerHTML=`<div class="r-head"><div class="store">Vekes</div><div class="sub">Handleliste · veiledende priser</div></div>
+    ${rows}<div class="r-total"><span class="t-lab">TOTALT</span><span class="t-val num">${fmt(shop.total)} kr</span></div>
+    ${(shop.dekket&&shop.dekket.length)?`<div class="r-hjemme"><div class="r-hjemme-lab">Har du hjemme — ikke handle</div>${shop.dekket.map(d=>`<div class="r-hjemme-linje">✓ ${d.navn}</div>`).join("")}</div>`:""}
+    ${shop.spart>0?`<div class="r-spart">Du sparer <b>${fmt(shop.spart)} kr</b> på varer du har fra før</div>`:""}
+    <div class="r-foot">Tilsvarer <b>${fmt(perPortion)} kr</b> per porsjon · ${persons*N} porsjoner totalt</div>`;
+  el.appendChild(rec);
+
+  el.querySelectorAll(".swap").forEach(b=>b.addEventListener("click",()=>swapDinner(parseInt(b.dataset.idx,10))));
+  el.querySelectorAll(".recipe-btn").forEach(b=>b.addEventListener("click",()=>toggleRecipe(parseInt(b.dataset.idx,10),b)));
+
+}
+
+function swapDinner(idx){
+  const {plan,pref,daily,dietMode,avoid}=state.current,used=new Set(plan.map(r=>r.id));
+  const av=Array.isArray(avoid)?avoid:[];
+  const NIVA_RANK={Enkel:1,Middels:2,Vanskelig:3,Ekspert:4};
+  const fNiva=Number(state.fNiva)||4, fTid=Number(state.fTid)||90, fKj=Array.isArray(state.fKjokken)?state.fKjokken:[];
+  const filterOk=r=> (NIVA_RANK[r.niva]||1)<=fNiva && (!r.tid||r.tid<=fTid) && (fKj.length===0||fKj.includes(r.kjokken));
+  const dietOk=r=> dietMode==="vegansk" ? r.vegan : dietMode==="vegetar" ? (r.veg && !r.vegan) : dietMode==="begge" ? r.veg : true;
+  const ok=r=> dietOk(r) && recipeAllergyInfo(r,av).safe && filterOk(r);
+  let pool=RECIPES.filter(r=>ok(r)&&!used.has(r.id));
+  if(!pool.length)pool=RECIPES.filter(ok);
+  if(!pool.length) return;
+  const ranked=pool.map(r=>({r,s:scoreRecipe(r,pref,daily)})).sort((a,b)=>b.s-a.s);
+  const top=ranked.slice(0,Math.min(4,ranked.length));
+  plan[idx]=top[Math.floor(Math.random()*top.length)].r; render();
+}
+
+/* ---------- OPPSKRIFT (Claude, forankret i handlelista) ---------- */
+const recipeCache={};
+const LIQUID_ING=new Set(["olivenolje","melk","kokosmelk"]);
+function scaledIngredients(recipe,persons){
+  const f=persons/BASE_SERV;
+  return recipe.ing.map(([id,g])=>{
+    const it=ING[id], amt=g*f, name=it.n.toLowerCase();
+    if(id==="egg") return {name, amount:Math.max(1,Math.round(amt/58)), unit:"stk"};
+    if(LIQUID_ING.has(id)) return {name, amount:Math.round(amt), unit:"ml"};
+    return {name, amount:Math.round(amt), unit:"g"};
+  });
+}
+function ingLine(i){ return i.unit==="stk" ? `${i.amount} ${i.name}` : `${i.amount} ${i.unit} ${i.name}`; }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+async function fetchRecipe(recipe,persons){
+  const key=recipe.id+"_"+persons;
+  if(recipeCache[key]) return recipeCache[key];
+  const ings=scaledIngredients(recipe,persons);
+  const res=await fetch("/.netlify/functions/recipe",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({dishName:recipe.navn,persons,ingredients:ings})
+  });
+  if(!res.ok) throw new Error("recipe "+res.status);
+  const data=await res.json();
+  if(!data||typeof data.raw!=="string") throw new Error("tomt svar");
+  const obj=JSON.parse(data.raw);
+  const out={
+    timeMin:Math.max(5,Math.min(180,parseInt(obj.timeMin,10)||30)),
+    steps:Array.isArray(obj.steps)?obj.steps.filter(s=>typeof s==="string"&&s.trim()).slice(0,9):[]
+  };
+  if(!out.steps.length) throw new Error("ingen steg");
+  recipeCache[key]=out;
+  return out;
+}
+async function toggleRecipe(idx,btn){
+  const panel=document.getElementById("recipe-"+idx);
+  if(!panel) return;
+  if(panel.dataset.open==="1"){ panel.innerHTML=""; panel.dataset.open="0"; btn.textContent="Vis oppskrift"; return; }
+  const recipe=state.current.plan[idx], persons=state.persons;
+  const ings=scaledIngredients(recipe,persons);
+  btn.disabled=true; btn.textContent="Henter…"; panel.dataset.open="1";
+  panel.innerHTML=`<div class="recipe-inner"><div class="loading-sm"><span class="spinner sp-dark"></span> Claude skriver oppskriften…</div></div>`;
+  try{
+    const rec=await fetchRecipe(recipe,persons);
+    const ingHtml=ings.map(i=>`<li>${escapeHtml(ingLine(i))}</li>`).join("");
+    const stepHtml=rec.steps.map(s=>`<li>${escapeHtml(s)}</li>`).join("");
+    panel.innerHTML=`<div class="recipe-inner">
+      <div class="recipe-head"><span class="rp-lab">Oppskrift</span><span class="rp-time num">~${rec.timeMin} min</span></div>
+      <div class="rp-sub">Ingredienser · ${persons} porsjoner</div>
+      <ul class="recipe-ing">${ingHtml}</ul>
+      <ol class="recipe-steps">${stepHtml}</ol>
+      <div class="rp-foot">Bruker kun varer fra handlelista di.</div></div>`;
+    btn.textContent="Skjul oppskrift";
+  }catch(e){
+    console.warn("Oppskrift feilet:",e);
+    panel.innerHTML=`<div class="recipe-inner"><div class="rp-err">Kunne ikke hente oppskrift akkurat nå. Sjekk at API-nøkkel og kreditt er på plass, og prøv igjen.</div></div>`;
+    panel.dataset.open="0"; btn.textContent="Vis oppskrift";
+  }finally{ btn.disabled=false; }
+}
+
+/* ---------- KONTROLLER ---------- */
+document.querySelectorAll("#pref button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("#pref button").forEach(x=>x.classList.remove("is-active"));b.classList.add("is-active");state.pref=b.dataset.v;}));
+
+/* ---------- FILTER ---------- */
+const CUISINES=[
+  {n:"Norsk",f:"🇳🇴"},{n:"Italiensk",f:"🇮🇹"},{n:"Meksikansk",f:"🇲🇽"},{n:"Indisk",f:"🇮🇳"},
+  {n:"Kinesisk",f:"🇨🇳"},{n:"Japansk",f:"🇯🇵"},{n:"Thailandsk",f:"🇹🇭"},{n:"Amerikansk",f:"🇺🇸"},
+  {n:"Fransk",f:"🇫🇷"},{n:"Gresk",f:"🇬🇷"},{n:"Spansk",f:"🇪🇸"},{n:"Tyrkisk",f:"🇹🇷"},
+  {n:"Koreansk",f:"🇰🇷"},{n:"Vietnamesisk",f:"🇻🇳"},{n:"Libanesisk",f:"🇱🇧"},{n:"Brasiliansk",f:"🇧🇷"},{n:"Marokkansk",f:"🇲🇦"}
+];
+const NIVA_NAVN={1:"Enkel",2:"Middels",3:"Vanskelig",4:"Ekspert"};
+const TID_MIN={1:15,2:30,3:45,4:60,5:90};
+state.fKjokken=[]; // liste av valgte matland; tom = alle
+
+const filterToggle=document.getElementById("filterToggle"), filterPanel=document.getElementById("filterPanel"), filterBadge=document.getElementById("filterBadge");
+filterToggle.addEventListener("click",()=>{
+  const willOpen=filterPanel.hidden;
+  filterPanel.hidden=!willOpen;
+  filterToggle.setAttribute("aria-expanded",String(willOpen));
+});
+
+function updateFilterBadge(){
+  let n=0;
+  if((Number(state.fNiva)||4)<4)n++;
+  if((Number(state.fTidLvl)||5)<5)n++;
+  if((state.fKjokken||[]).length)n++;
+  if(n>0){ filterBadge.hidden=false; filterBadge.textContent=n+(n===1?" aktiv":" aktive"); }
+  else filterBadge.hidden=true;
+}
+
+// Glidebryter: vanskelighet (tak = valgt nivå)
+const fNivaSlider=document.getElementById("fNivaSlider"), fNivaCap=document.getElementById("fNivaCap");
+function paintNiva(){
+  const v=Number(fNivaSlider.value); state.fNiva=v;
+  fNivaSlider.closest(".slider-block").querySelectorAll(".slider-ticks span").forEach(s=>{
+    const lvl=Number(s.dataset.lvl);
+    s.classList.toggle("on",lvl===v);
+    s.classList.toggle("off",lvl>v);
+  });
+  fNivaCap.textContent = v===4 ? "Opp til Ekspert (alle)" : "Opp til "+NIVA_NAVN[v];
+  updateFilterBadge();
+}
+fNivaSlider.addEventListener("input",paintNiva);
+
+// Glidebryter: tid (tak = valgt minutt)
+const fTidSlider=document.getElementById("fTidSlider"), fTidCap=document.getElementById("fTidCap");
+function paintTid(){
+  const lvl=Number(fTidSlider.value); state.fTidLvl=lvl; state.fTid=TID_MIN[lvl];
+  fTidSlider.closest(".slider-block").querySelectorAll(".slider-ticks span").forEach(s=>{
+    const l=Number(s.dataset.lvl);
+    s.classList.toggle("on",l===lvl);
+    s.classList.toggle("off",l>lvl);
+  });
+  fTidCap.textContent = lvl===5 ? "Ingen grense" : "Maks "+TID_MIN[lvl]+" min";
+  updateFilterBadge();
+}
+fTidSlider.addEventListener("input",paintTid);
+
+// Kjøkken: søkbar flervalgs-liste med flagg
+const kjSearch=document.getElementById("kjokkenSearch"), kjList=document.getElementById("kjokkenList"), kjChips=document.getElementById("kjokkenChips");
+function renderKjChips(){
+  kjChips.innerHTML=state.fKjokken.map(n=>{
+    const c=CUISINES.find(x=>x.n===n);
+    return `<span class="kchip">${c?c.f:""} ${n}<button data-n="${n}" aria-label="Fjern">×</button></span>`;
+  }).join("");
+  kjChips.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>toggleKj(b.dataset.n)));
+}
+function renderKjList(){
+  const q=(kjSearch.value||"").toLowerCase().trim();
+  const items=CUISINES.filter(c=>c.n.toLowerCase().includes(q));
+  kjList.innerHTML=items.map(c=>{
+    const sel=state.fKjokken.includes(c.n);
+    return `<button type="button" class="kitem${sel?" sel":""}" data-n="${c.n}"><span class="flag">${c.f}</span>${c.n}<span class="check">✓</span></button>`;
+  }).join("") || `<div style="padding:10px 11px;color:var(--muted);font-size:12.5px">Ingen treff</div>`;
+  kjList.querySelectorAll(".kitem").forEach(b=>b.addEventListener("click",()=>toggleKj(b.dataset.n)));
+}
+function toggleKj(n){
+  const i=state.fKjokken.indexOf(n);
+  if(i>=0) state.fKjokken.splice(i,1); else state.fKjokken.push(n);
+  renderKjChips(); renderKjList(); updateFilterBadge();
+}
+kjSearch.addEventListener("input",renderKjList);
+renderKjChips(); renderKjList();
+document.querySelectorAll('[data-step] button').forEach(b=>b.addEventListener("click",()=>{
+  const which=b.closest("[data-step]").dataset.step,d=parseInt(b.dataset.d,10);
+  if(which==="dinners"){state.dinners=Math.min(7,Math.max(3,state.dinners+d));document.getElementById("dinnersVal").textContent=state.dinners;}
+  else{state.persons=Math.min(6,Math.max(1,state.persons+d));document.getElementById("personsVal").textContent=state.persons;}
+}));
+document.getElementById("freeText").addEventListener("input",e=>state.freeText=e.target.value);
+document.getElementById("brukHarHjemme")?.addEventListener("change",e=>{ state.brukHarHjemme=e.target.checked; });
+
+const btn=document.getElementById("generate"),ctaLabel=document.getElementById("ctaLabel");
+btn.addEventListener("click",async()=>{
+  const useClaude=(state.freeText||"").trim().length>0;
+  btn.disabled=true;
+  if(useClaude){ ctaLabel.innerHTML='<span class="spinner"></span> Claude tenker…'; showLoading();
+    document.getElementById("results").scrollIntoView({behavior:"smooth",block:"start"}); }
+  try{ state.current=await buildPlan(state); render(); }
+  catch(e){ document.getElementById("results").innerHTML=`<div class="loading">Noe gikk galt. Prøv igjen.</div>`; }
+  finally{ btn.disabled=false; ctaLabel.textContent="Lag ukesmeny"; }
+  if(!useClaude) document.getElementById("results").scrollIntoView({behavior:"smooth",block:"start"});
+});
+
+/* ---------- BRO TIL INNLOGGING (profil) ---------- */
+window.MM_getSettings=()=>({goal:state.goal,preference:state.pref,dinners:state.dinners,persons:state.persons,freetext:state.freeText});
+window.MM_setProfileContext=(t)=>{ profileContext=t||""; };
+window.MM_getProfileContext=()=>profileContext;
+// Råvarelista (fra Supabase) gjøres tilgjengelig for «Har hjemme»-delen i profilen.
+window.MM_getIngredienser=()=>Object.entries(ING)
+  .map(([id,it])=>({id,navn:it.n,kat:it.kat,pg:it.pg,pk:it.pk}))
+  .sort((a,b)=>a.navn.localeCompare(b.navn,"nb"));
+// Varebeholdningen fra profilen gjøres tilgjengelig for motoren og handlelista.
+window.MM_setPantry=(arr)=>{
+  harHjemme={};
+  (arr||[]).forEach(p=>{ if(p.mengde>0) harHjemme[p.ingrediens_id]=Number(p.mengde); });
+  const rad=document.getElementById("harHjemmeRad");
+  if(rad) rad.hidden=!Object.keys(harHjemme).length;
+};
+window.MM_setRecentRecipes=(ids)=>{ recentRecipeIds=new Set(ids||[]); };
+window.MM_addRecentRecipes=(ids)=>{ (ids||[]).forEach(x=>recentRecipeIds.add(x)); };
+window.MM_applySettings=(p)=>{
+  if(!p) return;
+  const setSeg=(grp,val)=>document.querySelectorAll('#'+grp+' button').forEach(b=>b.classList.toggle('is-active',b.dataset.v===val));
+  if(p.goal){ state.goal=p.goal; setSeg('goal',p.goal); }
+  if(p.preference){ state.pref=p.preference; setSeg('pref',p.preference); }
+  if(p.dinners){ state.dinners=Math.min(7,Math.max(3,p.dinners)); document.getElementById('dinnersVal').textContent=state.dinners; }
+  if(p.persons){ state.persons=Math.min(6,Math.max(1,p.persons)); document.getElementById('personsVal').textContent=state.persons; }
+  if(typeof p.freetext==='string'){ state.freeText=p.freetext; document.getElementById('freeText').value=p.freetext; }
+};
+
+/* førstegangs-oppstart: vis «laster», vent på Supabase-data.
+   Kommer de ikke innen 8 sekunder, starter vi på innebygde reservedata. */
+document.getElementById("results").innerHTML=
+  '<div class="loading"><span class="spinner"></span> Henter retter og råvarer…</div>';
+setTimeout(()=>{ if(!mmStartet){ console.warn("Supabase-data uteble — bruker innebygde reservedata."); window.mmStartApp("reserve"); } },8000);
+</script>
+<script type="module">
+/* ---------- INNLOGGING (Supabase) ---------- */
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL="https://izgcnwyflmctaxfxwzga.supabase.co";
+const SUPABASE_KEY="sb_publishable_e-Y0JsjSgEZcjIdBI5R0GQ__jJEmKSk";
+
+// Fanger invitasjons-/tilbakestillingslenke FØR Supabase-klienten rydder bort adressen.
+const MM_initialHash=(typeof window!=="undefined" && window.location.hash) ? window.location.hash : "";
+const MM_authFlow=(MM_initialHash.match(/type=(invite|recovery)/)||[])[1] || null;
+
+let supabase=null;
+try{ supabase=createClient(SUPABASE_URL,SUPABASE_KEY); }
+catch(e){ console.warn("Supabase utilgjengelig:",e); }
+
+/* ---------- HENT RETTER OG RÅVARER FRA SUPABASE ---------- */
+(async()=>{
+  if(!supabase){ window.mmStartApp("reserve"); return; }
+  try{
+    const [ing,retter,koblinger]=await Promise.all([
+      supabase.from("ingredienser").select("*"),
+      supabase.from("retter").select("*"),
+      supabase.from("rett_ingredienser").select("rett_id,ingrediens_id,gram").limit(5000)
+    ]);
+    if(ing.error||retter.error||koblinger.error) throw (ing.error||retter.error||koblinger.error);
+    const ok=window.mmApplyData(ing.data||[],retter.data||[],koblinger.data||[]);
+    if(ok){
+      console.log(`Data fra Supabase: ${(ing.data||[]).length} råvarer, ${(retter.data||[]).length} retter, ${(koblinger.data||[]).length} koblinger.`);
+      window.mmStartApp("supabase");
+    } else {
+      console.warn("Supabase-data var ufullstendige — bruker innebygde reservedata.");
+      window.mmStartApp("reserve");
+    }
+  }catch(e){
+    console.warn("Kunne ikke hente fra Supabase, bruker reservedata:",e);
+    window.mmStartApp("reserve");
+  }
+})();
+
+const $=id=>document.getElementById(id);
+const authArea=$("authArea"), modal=$("authModal"), msg=$("authMsg");
+
+function showMsg(type,text){ msg.className="auth-msg "+type; msg.textContent=text; }
+function clearMsg(){ msg.className="auth-msg"; msg.textContent=""; }
+function openModal(){ clearMsg(); modal.hidden=false; }
+function closeModal(){ modal.hidden=true; }
+
+function renderAuth(user){
+  if(user){
+    authArea.innerHTML=`<span class="auth-user">${user.email}</span><button class="auth-btn ghost" id="authSignout">Logg ut</button>`;
+    $("authSignout").addEventListener("click",async()=>{ await supabase.auth.signOut(); });
+  }else{
+    authArea.innerHTML=`<button class="auth-btn" id="authOpen">Logg inn</button>`;
+    $("authOpen").addEventListener("click",openModal);
+  }
+  const ob=$("openProfile"); if(ob) ob.hidden=!user;
+  const na=$("navAdmin"); if(na) na.hidden=!user;
+}
+
+/* ---------- PROFIL: hent og lagre ---------- */
+let currentAbout="";
+const profModal=$("profileModal"), profMsg=$("profileMsg");
+function openProfile(){
+  $("profileAbout").value=currentAbout;
+  renderPantryItems();
+  profMsg.className="auth-msg"; profMsg.textContent="";
+  profModal.hidden=false;
+}
+function closeProfile(){ profModal.hidden=true; }
+
+async function loadProfile(user){
+  if(!supabase||!user) return;
+  try{
+    const { data }=await supabase.from("profiles").select("*").eq("id",user.id).maybeSingle();
+    if(data){
+      if(window.MM_applySettings) window.MM_applySettings(data);
+      currentAbout=data.about||"";
+      if(window.MM_setProfileContext) window.MM_setProfileContext(currentAbout);
+    }
+  }catch(e){ console.warn("Kunne ikke hente profil:",e); }
+}
+async function saveProfile(){
+  if(!supabase) return;
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(!user){ openModal(); return; }
+  const about=$("profileAbout").value.trim();
+  const s=window.MM_getSettings?window.MM_getSettings():{};
+  const row={ id:user.id, goal:s.goal, preference:s.preference, dinners:s.dinners, persons:s.persons, freetext:s.freetext, about, updated_at:new Date().toISOString() };
+  try{
+    const { error }=await supabase.from("profiles").upsert(row);
+    if(error) throw error;
+    currentAbout=about;
+    if(window.MM_setProfileContext) window.MM_setProfileContext(about);
+    profMsg.className="auth-msg ok"; profMsg.textContent="✓ Profil lagret — tas med i hver meny framover.";
+    setTimeout(closeProfile,1300);
+  }catch(e){ console.warn(e); profMsg.className="auth-msg err"; profMsg.textContent="Kunne ikke lagre: "+(e.message||e); }
+}
+$("openProfile")?.addEventListener("click",openProfile);
+$("profileClose")?.addEventListener("click",closeProfile);
+$("profileSave")?.addEventListener("click",saveProfile);
+profModal?.addEventListener("click",e=>{ if(e.target===profModal) closeProfile(); });
+
+/* ---------- HAR HJEMME (varebeholdning) ---------- */
+let pantry=[];            // [{ingrediens_id, mengde}]
+const pSearch=$("pantrySearch"), pFinner=$("pantryFinner"), pItems=$("pantryItems"), pMsg=$("pantryMsg");
+
+function pantryMelding(tekst,type){
+  if(!pMsg) return;
+  pMsg.className="pantry-msg"+(type?" "+type:""); pMsg.textContent=tekst||"";
+  if(tekst) setTimeout(()=>{ if(pMsg.textContent===tekst){ pMsg.textContent=""; pMsg.className="pantry-msg"; } },2500);
+}
+function ingListe(){ return window.MM_getIngredienser?window.MM_getIngredienser():[]; }
+function ingInfo(id){ return ingListe().find(x=>x.id===id); }
+
+// Finner naturlig enhet ut fra pakketeksten:
+//   «12 stk» / «1 pose» -> telles i stk/pose
+//   «500 ml» / «1 l» / «4 dl» -> telles i ml
+//   ellers -> gram
+// Vi lagrer alltid gram i basen, men lar deg skrive i den enheten som er naturlig.
+function stkInfo(it){
+  if(!it||!it.pk||!it.pg) return null;
+  const t=String(it.pk).trim();
+  const stk=t.match(/^\s*(\d+(?:[.,]\d+)?)\s*(stk|pose|poser)\b/i);
+  if(stk){
+    const antall=parseFloat(stk[1].replace(",","."));
+    if(antall>0) return { enhet:/pose/i.test(stk[2])?"pose":"stk", perEnhet: it.pg/antall };
+  }
+  const vsk=t.match(/^\s*(\d+(?:[.,]\d+)?)\s*(ml|dl|l|liter)\b/i);
+  if(vsk){
+    const tall=parseFloat(vsk[1].replace(",","."));
+    const enh=vsk[2].toLowerCase();
+    const ml = enh==="ml" ? tall : (enh==="dl" ? tall*100 : tall*1000);
+    if(ml>0) return { enhet:"ml", perEnhet: it.pg/ml };
+  }
+  return null;
+}
+
+function renderPantryItems(){
+  if(!pItems) return;
+  if(!pantry.length){ pItems.innerHTML='<div class="pantry-tom">Ingen varer lagt inn ennå.</div>'; return; }
+  pItems.innerHTML=pantry.map(p=>{
+    const it=ingInfo(p.ingrediens_id); if(!it) return "";
+    const st=stkInfo(it);
+    if(st){
+      const raa=p.mengde/st.perEnhet;
+      const antall = st.enhet==="ml" ? Math.round(raa) : Math.round(raa*10)/10;
+      const steg = st.enhet==="ml" ? 50 : 1;
+      return `<div class="pantry-row" data-id="${p.ingrediens_id}" data-per="${st.perEnhet}">
+        <span class="navn">${it.navn}<small>${st.enhet==="ml"?"":"≈ "+Math.round(p.mengde)+" g"}</small></span>
+        <input class="mengde" type="number" min="0" step="${steg}" value="${antall}">
+        <span class="enhet">${st.enhet}</span>
+        <button class="fjern" aria-label="Fjern">×</button>
+      </div>`;
+    }
+    const pakker=it.pg?(p.mengde/it.pg):0;
+    const hint=it.pg?`≈ ${Math.round(pakker*10)/10} × ${it.pk}`:"";
+    return `<div class="pantry-row" data-id="${p.ingrediens_id}" data-per="1">
+      <span class="navn">${it.navn}<small>${hint}</small></span>
+      <input class="mengde" type="number" min="0" step="10" value="${Math.round(p.mengde)}">
+      <span class="enhet">g</span>
+      <button class="fjern" aria-label="Fjern">×</button>
+    </div>`;
+  }).join("");
+  pItems.querySelectorAll(".pantry-row").forEach(row=>{
+    const id=row.dataset.id, per=Number(row.dataset.per)||1;
+    row.querySelector(".mengde").addEventListener("change",e=>{
+      const v=Math.max(0,Number(e.target.value)||0);
+      if(v===0) fjernPantry(id); else settPantry(id, Math.round(v*per));
+    });
+    row.querySelector(".fjern").addEventListener("click",()=>fjernPantry(id));
+  });
+}
+function renderPantryFinner(){
+  if(!pFinner) return;
+  const q=(pSearch.value||"").toLowerCase().trim();
+  if(!q){ pFinner.hidden=true; pFinner.innerHTML=""; return; }
+  const alt=ingListe().filter(x=>x.navn.toLowerCase().includes(q)&&!pantry.some(p=>p.ingrediens_id===x.id)).slice(0,8);
+  pFinner.hidden=false;
+  pFinner.innerHTML=alt.length
+    ? alt.map(x=>`<button type="button" class="pitem" data-id="${x.id}">${x.navn}<span class="pk">${x.pk}</span></button>`).join("")
+    : '<div style="padding:9px 11px;color:var(--muted);font-size:12.5px">Ingen treff</div>';
+  pFinner.querySelectorAll(".pitem").forEach(b=>b.addEventListener("click",()=>{
+    const it=ingInfo(b.dataset.id);
+    settPantry(b.dataset.id, it&&it.pg?it.pg:100);   // starter på én pakke
+    pSearch.value=""; renderPantryFinner();
+  }));
+}
+async function settPantry(id,mengde){
+  const i=pantry.findIndex(p=>p.ingrediens_id===id);
+  if(i>=0) pantry[i].mengde=mengde; else pantry.push({ingrediens_id:id,mengde});
+  renderPantryItems();
+  if(!supabase) return;
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(!user){ pantryMelding("Logg inn for å lagre varebeholdningen.","err"); return; }
+  try{
+    const { error }=await supabase.from("har_hjemme")
+      .upsert({bruker_id:user.id,ingrediens_id:id,mengde,oppdatert:new Date().toISOString()},
+              {onConflict:"bruker_id,ingrediens_id"});
+    if(error) throw error;
+    pantryMelding("✓ Lagret","ok");
+  }catch(e){ console.warn("Kunne ikke lagre vare:",e); pantryMelding("Kunne ikke lagre: "+(e.message||e),"err"); }
+}
+async function fjernPantry(id){
+  pantry=pantry.filter(p=>p.ingrediens_id!==id);
+  renderPantryItems(); renderPantryFinner();
+  if(!supabase) return;
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(!user) return;
+  try{
+    const { error }=await supabase.from("har_hjemme").delete()
+      .eq("bruker_id",user.id).eq("ingrediens_id",id);
+    if(error) throw error;
+    pantryMelding("✓ Fjernet","ok");
+  }catch(e){ console.warn("Kunne ikke fjerne vare:",e); pantryMelding("Kunne ikke fjerne: "+(e.message||e),"err"); }
+}
+async function loadPantry(user){
+  if(!supabase||!user) return;
+  try{
+    const { data,error }=await supabase.from("har_hjemme").select("ingrediens_id,mengde");
+    if(error) throw error;
+    pantry=(data||[]).map(r=>({ingrediens_id:r.ingrediens_id,mengde:Number(r.mengde)}));
+    if(window.MM_setPantry) window.MM_setPantry(pantry);
+    renderPantryItems();
+  }catch(e){ console.warn("Kunne ikke hente varebeholdning:",e); }
+}
+pSearch?.addEventListener("input",renderPantryFinner);
+renderPantryItems();
+
+// Trekker forbrukte mengder fra beholdningen (kalles fra «Bruk denne menyen»).
+window.MM_forbrukHarHjemme=async function(brukt){
+  if(!supabase||!brukt) return false;
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(!user) return false;
+  try{
+    const oppdater=[], slett=[];
+    for(const [id,mengde] of Object.entries(brukt)){
+      const rad=pantry.find(p=>p.ingrediens_id===id);
+      if(!rad) continue;
+      const rest=Math.max(0, Math.round(rad.mengde-mengde));
+      if(rest<=0) slett.push(id);
+      else oppdater.push({bruker_id:user.id,ingrediens_id:id,mengde:rest,oppdatert:new Date().toISOString()});
+    }
+    if(oppdater.length){
+      const { error }=await supabase.from("har_hjemme").upsert(oppdater,{onConflict:"bruker_id,ingrediens_id"});
+      if(error) throw error;
+    }
+    if(slett.length){
+      const { error }=await supabase.from("har_hjemme").delete()
+        .eq("bruker_id",user.id).in("ingrediens_id",slett);
+      if(error) throw error;
+    }
+    pantry=pantry.filter(p=>!slett.includes(p.ingrediens_id));
+    oppdater.forEach(o=>{ const r=pantry.find(p=>p.ingrediens_id===o.ingrediens_id); if(r) r.mengde=o.mengde; });
+    if(window.MM_setPantry) window.MM_setPantry(pantry);
+    renderPantryItems();
+    return true;
+  }catch(e){ console.warn("Kunne ikke oppdatere beholdning:",e); return false; }
+};
+
+/* ---------- ADMIN: fremgangsmåter ---------- */
+const MENGDE_RE=/\d+([.,]\d+)?\s*(g|gram|kg|dl|ml|l|liter|ss|ts|stk|bokser?|poser?|pakker?)\b/i;
+
+// Tåler at Claude pakker JSON i kodeblokk eller legger tekst rundt: plukker ut {...}.
+function mmParseRecipeJSON(raw){
+  let s=String(raw).replace(/```json/gi,"").replace(/```/g,"").trim();
+  try{ return JSON.parse(s); }catch(e){}
+  const a=s.indexOf("{"), b=s.lastIndexOf("}");
+  if(a>=0 && b>a){ return JSON.parse(s.slice(a,b+1)); }
+  throw new Error("fant ingen gyldig JSON i svaret");
+}
+
+window.MM_renderAdmin=function(){
+  const list=document.getElementById("admList"), st=document.getElementById("admStatus");
+  if(!list) return;
+  if(typeof RECIPES==="undefined"||!Array.isArray(RECIPES)||!RECIPES.length){
+    list.innerHTML=`<div class="soon">Rettene er ikke lastet ennå — vent et øyeblikk og klikk Admin på nytt.</div>`;
+    return;
+  }
+  const done=RECIPES.filter(r=>r.fremgangsmate).length;
+  if(st) st.textContent=`${done} av ${RECIPES.length} retter har fremgangsmåte.`;
+  list.innerHTML="";
+  RECIPES.slice().sort((a,b)=>a.navn.localeCompare(b.navn,"no")).forEach(r=>{
+    const row=document.createElement("div"); row.className="adm-row";
+    row.innerHTML=`<div class="adm-top">
+        <span class="adm-name">${escapeHtml(r.navn)}</span>
+        <span class="adm-chip ${r.fremgangsmate?"ok":""}">${r.fremgangsmate?"✓ Har fremgangsmåte":"Mangler"}</span>
+        <button class="swap" data-adm="${r.id}">${r.fremgangsmate?"Se / endre":"Generer"}</button>
+      </div>
+      <div class="adm-body" id="admBody-${r.id}"></div>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll("[data-adm]").forEach(b=>b.addEventListener("click",()=>admOpen(b.dataset.adm)));
+};
+
+function admOpen(id){
+  const r=RECIPES.find(x=>x.id===id), body=document.getElementById("admBody-"+id);
+  if(!r||!body) return;
+  if(body.dataset.open==="1"){ body.innerHTML=""; body.dataset.open="0"; return; }
+  body.dataset.open="1";
+  let existing=null;
+  if(r.fremgangsmate){ try{ existing=typeof r.fremgangsmate==="string"?JSON.parse(r.fremgangsmate):r.fremgangsmate; }catch(e){} }
+  if(existing&&Array.isArray(existing.steps)&&existing.steps.length) admShow(r,body,existing,false);
+  else admRun(r,body);
+}
+
+function admShow(r,body,rec,isNew){
+  const steps=rec.steps.map(s=>`<li class="${MENGDE_RE.test(s)?"mengde":""}">${escapeHtml(s)}</li>`).join("");
+  const harMengde=rec.steps.some(s=>MENGDE_RE.test(s));
+  body.innerHTML=`<div class="rp-sub" style="margin-top:10px;">~${rec.timeMin} min · ${isNew?"nytt forslag — ikke lagret":"lagret versjon"}</div>
+    <ol class="adm-steps">${steps}</ol>
+    ${harMengde?`<div class="adm-warnbox">⚠ Gule steg ser ut til å inneholde mengder. Generer på nytt, eller vurder selv om det er greit.</div>`:""}
+    <div class="adm-actions">
+      ${isNew?`<button class="auth-btn" data-a="save">Godkjenn og lagre</button>`:""}
+      <button class="swap" data-a="regen">${isNew?"Generer på nytt":"Generer nytt forslag"}</button>
+      ${isNew&&r.fremgangsmate?`<button class="swap" data-a="keep">Behold lagret versjon</button>`:""}
+    </div>
+    <div class="auth-msg" id="admMsg-${r.id}"></div>`;
+  body.querySelector('[data-a="regen"]').addEventListener("click",()=>admRun(r,body));
+  const sv=body.querySelector('[data-a="save"]'); if(sv) sv.addEventListener("click",()=>admSave(r,rec,body));
+  const kp=body.querySelector('[data-a="keep"]'); if(kp) kp.addEventListener("click",()=>{ body.innerHTML=""; body.dataset.open="0"; });
+}
+
+async function admRun(r,body){
+  body.innerHTML=`<div class="loading-sm" style="margin-top:10px;"><span class="spinner sp-dark"></span> Claude skriver fremgangsmåte …</div>`;
+  try{
+    const ingNames=r.ing.map(([id])=>(typeof ING!=="undefined"&&ING[id])?ING[id].n:id);
+    const res=await fetch("/.netlify/functions/fremgangsmate",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({dishName:r.navn,ingredients:ingNames,beskrivelse:r.beskrivelse||"",tid:r.tid||null})
+    });
+    if(!res.ok) throw new Error("funksjon svarte "+res.status);
+    const data=await res.json();
+    const obj=mmParseRecipeJSON(data.raw||"");
+    const steps=(obj.steps||[]).filter(s=>typeof s==="string"&&s.trim()).slice(0,9);
+    const timeMin=Math.max(5,Math.min(180,parseInt(obj.timeMin,10)||r.tid||30));
+    if(!steps.length) throw new Error("ingen steg i svaret");
+    admShow(r,body,{timeMin,steps},true);
+  }catch(e){
+    console.warn("Admin-generering feilet:",e);
+    body.innerHTML=`<div class="rp-err" style="margin-top:10px;">Kunne ikke generere (${escapeHtml(e.message||String(e))}). Sjekk at <b>fremgangsmate.mjs</b> er lastet opp til netlify/functions og at Netlify har deployet på nytt.</div>`;
+    body.dataset.open="0";
+  }
+}
+
+async function admSave(r,rec,body){
+  const m=document.getElementById("admMsg-"+r.id);
+  const setM=(t,txt)=>{ if(m){ m.className="auth-msg "+t; m.textContent=txt; } };
+  try{
+    if(!supabase) throw new Error("Supabase utilgjengelig");
+    const payload=JSON.stringify({timeMin:rec.timeMin,steps:rec.steps});
+    const { data, error }=await supabase.from("retter").update({ fremgangsmate: payload }).eq("id", r.id).select("id");
+    if(error) throw error;
+    if(!data||!data.length) throw new Error("RLS");
+    r.fremgangsmate=payload;
+    window.MM_renderAdmin();
+  }catch(e){
+    const txt=String(e.message||e);
+    if(txt==="RLS"||/policy|permission|denied|violates/i.test(txt)){
+      setM("err","Ingen tilgang til å lagre. Sjekk at admin-SQL-en er kjørt i Supabase, og at e-posten i den er nøyaktig den du er innlogget med.");
+    }else{
+      setM("err",txt);
+    }
+  }
+}
+
+/* ---------- MENYHISTORIKK ---------- */
+async function loadRecent(user){
+  if(!supabase||!user||!window.MM_setRecentRecipes) return;
+  try{
+    const { data }=await supabase.from("menus").select("recipe_ids").eq("brukt",true).order("created_at",{ascending:false}).limit(2);
+    const ids=(data||[]).flatMap(m=>m.recipe_ids||[]);
+    window.MM_setRecentRecipes(ids);
+  }catch(e){ console.warn("Kunne ikke hente historikk:",e); }
+}
+window.MM_reloadRecent=async function(){
+  if(!supabase) return;
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(user) await loadRecent(user);
+};
+/* ---------- STATISTIKK ---------- */
+// Bygger kun på BRUKTE uker (mat som faktisk ble laget). Priser = dagens priser.
+const STAT_FARGER=["#2e6b4f","#b4632a","#7f9b6a","#c9a227","#5b7d8c","#a35d6a","#8a6f4e","#4e8a7d"];
+
+async function statHentUker(kunBrukte){
+  if(!supabase) return {feil:"Supabase er utilgjengelig."};
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(!user) return {feil:"Logg inn for å se statistikken din."};
+  let q=supabase.from("menus").select("navn,status,brukt,recipe_ids,meta,created_at")
+    .eq("user_id",user.id).order("created_at",{ascending:true});
+  if(kunBrukte) q=q.eq("brukt",true);
+  const { data, error }=await q;
+  if(error) return {feil:"Kunne ikke hente data: "+(error.message||error)};
+  return {rader:data||[]};
+}
+function statPlan(ids){ return (ids||[]).map(id=>RECIPES.find(r=>r.id===id)).filter(Boolean); }
+function statTom(host,ikon,tekst){ host.innerHTML=`<div class="soon"><div class="si">${ikon}</div>${tekst}</div>`; }
+const STAT_TOM_TEKST=`Ingen brukte uker ennå. Lag en meny, trykk «Bruk denne menyen» i Mine uker — så fylles denne siden.`;
+
+// Kvitteringsstripe med nøkkeltall. Tallene teller seg opp som et kassaapparat.
+function statKpiStripe(items){
+  return `<div class="kpi-strip">`+items.map(it=>`<div class="kpi">
+    <div class="kpi-num"><span data-count="${it.tall}">0</span>${it.suffiks?`<span class="kpi-suf">${it.suffiks}</span>`:""}</div>
+    <div class="kpi-lab">${it.label}</div>${it.sub?`<div class="kpi-sub">${it.sub}</div>`:""}
+  </div>`).join("")+`</div>`;
+}
+function statTellOpp(host){
+  const reduser=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  host.querySelectorAll("[data-count]").forEach(el=>{
+    const mål=Number(el.dataset.count)||0;
+    if(reduser||mål<=0){ el.textContent=fmt(mål); return; }
+    const t0=performance.now(), varighet=650;
+    const steg=(t)=>{ const p=Math.min(1,(t-t0)/varighet), e=1-Math.pow(1-p,3);
+      el.textContent=fmt(mål*e); if(p<1) requestAnimationFrame(steg); };
+    requestAnimationFrame(steg);
+  });
+}
+// Ring-diagram (SVG) med tegnforklaring.
+function statRing(segmenter){
+  const sum=segmenter.reduce((s,x)=>s+x.verdi,0)||1;
+  const R=15.9155, C=100; let offset=25;
+  const ringer=segmenter.map((s,i)=>{
+    const pct=(s.verdi/sum)*100;
+    const el=`<circle r="${R}" cx="21" cy="21" fill="transparent" stroke="${STAT_FARGER[i%STAT_FARGER.length]}" stroke-width="5.5" stroke-dasharray="${pct} ${C-pct}" stroke-dashoffset="${offset}"></circle>`;
+    offset-=pct; return el;
+  }).join("");
+  const tegn=segmenter.map((s,i)=>`<div class="legend-row"><span class="legend-dot" style="background:${STAT_FARGER[i%STAT_FARGER.length]}"></span><span class="legend-lab">${escapeHtml(s.navn)}</span><span class="legend-val">${Math.round((s.verdi/sum)*100)} %</span></div>`).join("");
+  return `<div class="donut-wrap"><svg viewBox="0 0 42 42" class="donut">${ringer}</svg><div class="legend">${tegn}</div></div>`;
+}
+function statBar(lab,verdi,maks,visning){
+  const pct=Math.max(2,Math.round((verdi/(maks||1))*100));
+  return `<div class="bar-row"><span class="bar-lab" title="${escapeHtml(lab)}">${escapeHtml(lab)}</span><span class="bar-track"><span class="bar-fill" style="width:${pct}%"></span></span><span class="bar-val">${visning}</span></div>`;
+}
+function statUkeNavn(m){ const c=(m.navn||"").trim(); return c||("Meny "+wkFmtDato(m.created_at)); }
+
+/* --- Økonomi --- */
+window.MM_renderOkonomi=async function(){
+  const host=$("okoInnhold"); if(!host) return;
+  host.innerHTML=`<div class="loading-sm"><span class="spinner sp-dark"></span> Henter tallene …</div>`;
+  const res=await statHentUker(true);
+  if(res.feil){ statTom(host,"💰",escapeHtml(res.feil)); return; }
+  const uker=res.rader.map(m=>{
+    const plan=statPlan(m.recipe_ids); if(!plan.length) return null;
+    const pers=Math.max(1,Number(m.meta&&m.meta.persons)||2);
+    const prev=state.brukHarHjemme; state.brukHarHjemme=false;
+    const shop=buildShopping(plan,pers);
+    state.brukHarHjemme=prev;
+    return {navn:statUkeNavn(m),dato:m.created_at,total:shop.total,middager:plan.length,porsjoner:plan.length*pers};
+  }).filter(Boolean);
+  if(!uker.length){ statTom(host,"💰",STAT_TOM_TEKST); return; }
+
+  const totalSum=uker.reduce((s,u)=>s+u.total,0);
+  const totMid=uker.reduce((s,u)=>s+u.middager,0);
+  const totPor=uker.reduce((s,u)=>s+u.porsjoner,0);
+  const dyrest=uker.reduce((a,u)=>u.total>a.total?u:a,uker[0]);
+  const billigst=uker.reduce((a,u)=>u.total<a.total?u:a,uker[0]);
+
+  let html=statKpiStripe([
+    {tall:totalSum,suffiks:"kr",label:"Brukt totalt",sub:uker.length+(uker.length===1?" brukt uke":" brukte uker")},
+    {tall:totalSum/uker.length,suffiks:"kr",label:"Snitt per uke"},
+    {tall:totMid?totalSum/totMid:0,suffiks:"kr",label:"Snitt per middag"},
+    {tall:totPor?totalSum/totPor:0,suffiks:"kr",label:"Snitt per porsjon"}
+  ]);
+  html+=`<div class="stat-block"><h3>Billigste og dyreste uke</h3>
+    ${statBar(billigst.navn,billigst.total,dyrest.total,fmt(billigst.total)+" kr")}
+    ${statBar(dyrest.navn,dyrest.total,dyrest.total,fmt(dyrest.total)+" kr")}
+  </div>`;
+  const vis=uker.slice(-10), maks=Math.max(...vis.map(u=>u.total),1);
+  html+=`<div class="stat-block"><h3>Kostnad per uke${uker.length>10?" · siste 10":""}</h3>
+    ${vis.map(u=>{ const d=new Date(u.dato); const lab=isNaN(d)?u.navn:(d.getDate()+". "+MND_KORT[d.getMonth()]); return statBar(lab,u.total,maks,fmt(u.total)+" kr"); }).join("")}
+  </div>`;
+  host.innerHTML=html; statTellOpp(host);
+};
+
+/* --- Mat & smak --- */
+window.MM_renderMat=async function(){
+  const host=$("matInnhold"); if(!host) return;
+  host.innerHTML=`<div class="loading-sm"><span class="spinner sp-dark"></span> Henter tallene …</div>`;
+  const res=await statHentUker(true);
+  if(res.feil){ statTom(host,"🍽",escapeHtml(res.feil)); return; }
+  const alle=[]; res.rader.forEach(m=>statPlan(m.recipe_ids).forEach(r=>alle.push(r)));
+  if(!alle.length){ statTom(host,"🍽",STAT_TOM_TEKST); return; }
+
+  const antallPer={}, kjokken={}, diett={Vegansk:0,Vegetar:0,"Med kjøtt eller fisk":0};
+  let tidSum=0, tidAnt=0;
+  alle.forEach(r=>{
+    antallPer[r.id]=(antallPer[r.id]||0)+1;
+    if(r.kjokken) kjokken[r.kjokken]=(kjokken[r.kjokken]||0)+1;
+    if(r.vegan) diett.Vegansk++; else if(r.veg) diett.Vegetar++; else diett["Med kjøtt eller fisk"]++;
+    if(r.tid){ tidSum+=r.tid; tidAnt++; }
+  });
+  const unike=Object.keys(antallPer).length;
+  const kjTopp=Object.entries(kjokken).sort((a,b)=>b[1]-a[1]);
+  const topp=Object.entries(antallPer).sort((a,b)=>b[1]-a[1]).slice(0,6)
+    .map(([id,n])=>({r:RECIPES.find(x=>x.id===id),n})).filter(x=>x.r);
+
+  let html=statKpiStripe([
+    {tall:alle.length,label:"Middager laget"},
+    {tall:unike,label:"Ulike retter prøvd"},
+    {tall:tidAnt?tidSum/tidAnt:0,suffiks:"min",label:"Snitt tid per rett"},
+    {tall:kjTopp.length,label:"Kjøkken utforsket"}
+  ]);
+  html+=`<div class="stat-block"><h3>Mest brukte retter</h3>
+    ${topp.map(t=>statBar(t.r.navn,t.n,topp[0].n,"× "+t.n)).join("")}
+  </div>`;
+  if(kjTopp.length) html+=`<div class="stat-block"><h3>Kjøkken</h3>${statRing(kjTopp.map(([navn,verdi])=>({navn,verdi})))}</div>`;
+  const dSeg=Object.entries(diett).filter(([,v])=>v>0).map(([navn,verdi])=>({navn,verdi}));
+  if(dSeg.length) html+=`<div class="stat-block"><h3>Diett-fordeling</h3>${statRing(dSeg)}</div>`;
+  host.innerHTML=html; statTellOpp(host);
+};
+
+/* --- Ernæring --- */
+window.MM_renderErnaring=async function(){
+  const host=$("ernInnhold"); if(!host) return;
+  host.innerHTML=`<div class="loading-sm"><span class="spinner sp-dark"></span> Henter tallene …</div>`;
+  const res=await statHentUker(true);
+  if(res.feil){ statTom(host,"🥗",escapeHtml(res.feil)); return; }
+  const alle=[]; res.rader.forEach(m=>statPlan(m.recipe_ids).forEach(r=>alle.push(r)));
+  if(!alle.length){ statTom(host,"🥗",STAT_TOM_TEKST); return; }
+
+  let kcal=0,p=0,k=0,f=0;
+  alle.forEach(r=>{ const s=STATS[r.id]; if(s){ kcal+=s.kcal; p+=s.p; k+=s.k; f+=s.f; } });
+  const n=alle.length;
+  const proteinTopp=[...new Map(alle.map(r=>[r.id,r])).values()]
+    .map(r=>({r,pr:(STATS[r.id]||{}).p||0})).sort((a,b)=>b.pr-a.pr).slice(0,5);
+
+  let html=statKpiStripe([
+    {tall:kcal/n,suffiks:"kcal",label:"Snitt per porsjon"},
+    {tall:p/n,suffiks:"g",label:"Protein i snitt"},
+    {tall:k/n,suffiks:"g",label:"Karbo i snitt"},
+    {tall:f/n,suffiks:"g",label:"Fett i snitt"}
+  ]);
+  html+=`<div class="stat-block"><h3>Hvor kaloriene kommer fra</h3>
+    ${statRing([{navn:"Protein",verdi:p*4},{navn:"Karbohydrater",verdi:k*4},{navn:"Fett",verdi:f*9}])}
+  </div>`;
+  html+=`<div class="stat-block"><h3>Mest proteinrike retter du har laget</h3>
+    ${proteinTopp.map(t=>statBar(t.r.navn,t.pr,proteinTopp[0].pr||1,fmt(t.pr)+" g")).join("")}
+  </div>`;
+  host.innerHTML=html; statTellOpp(host);
+};
+
+/* --- Aktivitet --- */
+window.MM_renderAktivitet=async function(){
+  const host=$("aktInnhold"); if(!host) return;
+  host.innerHTML=`<div class="loading-sm"><span class="spinner sp-dark"></span> Henter tallene …</div>`;
+  const res=await statHentUker(false);
+  if(res.feil){ statTom(host,"📅",escapeHtml(res.feil)); return; }
+  const rader=res.rader;
+  if(!rader.length){ statTom(host,"📅","Ingen lagrede uker ennå. Lag en meny og trykk «Lagre meny» — så starter historien her."); return; }
+
+  const brukte=rader.filter(m=>m.brukt);
+  const status={aktiv:0,planlagt:0,arkivert:0};
+  rader.forEach(m=>{ status[m.status==="aktiv"?"aktiv":m.status==="planlagt"?"planlagt":"arkivert"]++; });
+  let mid=0,por=0;
+  brukte.forEach(m=>{ const plan=statPlan(m.recipe_ids); mid+=plan.length; por+=plan.length*Math.max(1,Number(m.meta&&m.meta.persons)||2); });
+  const perMnd={};
+  brukte.forEach(m=>{ const d=new Date(m.created_at); if(!isNaN(d)){ const nk=MND_KORT[d.getMonth()]+" "+String(d.getFullYear()).slice(2); perMnd[nk]=(perMnd[nk]||0)+1; } });
+  const mndListe=Object.entries(perMnd);
+
+  let html=statKpiStripe([
+    {tall:rader.length,label:"Uker lagret totalt"},
+    {tall:brukte.length,label:"Uker brukt"},
+    {tall:mid,label:"Middager laget"},
+    {tall:por,label:"Porsjoner servert"}
+  ]);
+  html+=`<div class="stat-block"><h3>Ukene dine nå</h3>
+    ${statBar("Aktiv",status.aktiv,Math.max(status.aktiv,status.planlagt,status.arkivert,1),String(status.aktiv))}
+    ${statBar("Planlagt",status.planlagt,Math.max(status.aktiv,status.planlagt,status.arkivert,1),String(status.planlagt))}
+    ${statBar("Arkivert",status.arkivert,Math.max(status.aktiv,status.planlagt,status.arkivert,1),String(status.arkivert))}
+  </div>`;
+  if(mndListe.length){
+    const maks=Math.max(...mndListe.map(([,v])=>v),1);
+    html+=`<div class="stat-block"><h3>Uker brukt per måned</h3>${mndListe.map(([lab,v])=>statBar(lab,v,maks,String(v))).join("")}</div>`;
+  }
+  host.innerHTML=html; statTellOpp(host);
+};
+
+/* ---------- MINE UKER ---------- */
+let mmCurrentWeekId=null; // samme økt + samme plan => oppdater raden i stedet for å lage duplikat
+window.MM_resetWeekSession=()=>{ mmCurrentWeekId=null; window.MM_editingWeek=false; window.MM_editingWeekName=null; };
+window.MM_setEditingWeek=(id)=>{ mmCurrentWeekId=id; };
+
+window.MM_saveWeek=async(ids,meta)=>{
+  if(!supabase) return {ok:false,reason:"unavailable"};
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(!user){ openModal(); return {ok:false,reason:"login"}; }
+  try{
+    if(mmCurrentWeekId){
+      const { data, error }=await supabase.from("menus")
+        .update({ recipe_ids:ids, meta }).eq("id",mmCurrentWeekId).eq("user_id",user.id).select("id,status");
+      if(error) throw error;
+      if(data&&data.length) return {ok:true,status:data[0].status};
+      mmCurrentWeekId=null; // raden fantes ikke lenger — fall igjennom til ny lagring
+    }
+    const { data:akt, error:e1 }=await supabase.from("menus").select("id").eq("user_id",user.id).eq("status","aktiv").limit(1);
+    if(e1) throw e1;
+    const status=(akt&&akt.length)?"planlagt":"aktiv";
+    const { data:ny, error:e2 }=await supabase.from("menus")
+      .insert({ user_id:user.id, recipe_ids:ids, navn:null, status, brukt:false, meta }).select("id");
+    if(e2) throw e2;
+    if(ny&&ny.length) mmCurrentWeekId=ny[0].id;
+    return {ok:true,status};
+  }catch(e){ console.warn("Kunne ikke lagre uke:",e); return {ok:false,reason:"error"}; }
+};
+
+function wkMsg(t,txt){ const m=$("weeksMsg"); if(m){ m.className="auth-msg "+(t||""); m.textContent=txt||""; } }
+const MND_KORT=["jan","feb","mar","apr","mai","jun","jul","aug","sep","okt","nov","des"];
+function wkFmtDato(iso){
+  if(!iso) return "";
+  const d=new Date(iso); if(isNaN(d)) return "";
+  const kl=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  return d.getDate()+". "+MND_KORT[d.getMonth()]+" kl. "+kl; // lokal tid = da du faktisk lagde den
+}
+function wkDishNames(ids){
+  return (ids||[]).map(id=>{ const r=(typeof RECIPES!=="undefined")?RECIPES.find(x=>x.id===id):null; return r?r.navn:null; })
+    .filter(Boolean).join(" · ") || "(rettene finnes ikke lenger i databasen)";
+}
+function wkCard(m,knapper){
+  const custom=(m.navn||"").trim();
+  const vist=custom||("Meny "+wkFmtDato(m.created_at));
+  const dato=custom?`<span class="wk-date">${wkFmtDato(m.created_at)}</span>`:"";
+  const div=document.createElement("div"); div.className="adm-row";
+  div.innerHTML=`<div class="adm-top">
+      <span class="wk-name" id="wkName-${m.id}">${escapeHtml(vist)}</span>
+      <button class="wk-editname" data-editname="${m.id}" title="Gi uka et navn">✎</button>
+      ${dato}
+      ${m.brukt?`<span class="adm-chip ok">✓ Brukt</span>`:""}
+      <button class="swap" data-open="${m.id}">Vis uke</button>
+      ${knapper}
+    </div>
+    <div class="wk-dishes">${escapeHtml(wkDishNames(m.recipe_ids))}</div>
+    <div class="wk-body" id="wkBody-${m.id}" hidden></div>
+    <div class="auth-msg" id="wkMsg-${m.id}"></div>`;
+  return div;
+}
+
+function wkToggleOpen(m,btn){
+  if(!m) return;
+  const body=document.getElementById("wkBody-"+m.id); if(!body) return;
+  if(!body.hidden){ body.hidden=true; btn.textContent="Vis uke"; return; }
+  if(!body.dataset.filled){
+    const persons=(m.meta&&Number(m.meta.persons))||2;
+    body.innerHTML=window.MM_buildWeekHTML?window.MM_buildWeekHTML(m.recipe_ids,persons,m.id):"";
+    body.dataset.filled="1";
+    body.querySelectorAll("[data-wkrecipe]").forEach(rb=>rb.addEventListener("click",()=>wkShowRecipe(rb.dataset.wkrecipe,persons,rb,m.id)));
+  }
+  body.hidden=false; btn.textContent="Skjul uke";
+}
+
+async function wkShowRecipe(rid,persons,btn,uid){
+  const panel=document.getElementById("wkRecipe-"+uid+"-"+rid); if(!panel) return;
+  if(panel.dataset.open==="1"){ panel.innerHTML=""; panel.dataset.open="0"; btn.textContent="Vis oppskrift"; return; }
+  panel.dataset.open="1"; btn.textContent="Skjul oppskrift";
+  const r=(typeof RECIPES!=="undefined")?RECIPES.find(x=>x.id===rid):null;
+  if(!r){ panel.innerHTML=`<div class="rp-err">Fant ikke retten.</div>`; return; }
+  // 1) Lagret fremgangsmåte fra databasen — umiddelbar og gratis.
+  let rec=null;
+  if(r.fremgangsmate){
+    try{
+      const o=typeof r.fremgangsmate==="string"?JSON.parse(r.fremgangsmate):r.fremgangsmate;
+      if(o&&Array.isArray(o.steps)&&o.steps.length) rec={timeMin:o.timeMin||r.tid||30,steps:o.steps};
+    }catch(e){}
+  }
+  // 2) Ellers: hent fra Claude som før.
+  if(!rec){
+    panel.innerHTML=`<div class="recipe-inner"><div class="loading-sm"><span class="spinner sp-dark"></span> Henter oppskrift …</div></div>`;
+    try{ rec=await fetchRecipe(r,persons); }
+    catch(e){ console.warn("Ukeoppskrift feilet:",e); panel.innerHTML=`<div class="recipe-inner"><div class="rp-err">Kunne ikke hente oppskriften nå — prøv igjen om litt.</div></div>`; return; }
+  }
+  panel.innerHTML=`<div class="recipe-inner">
+    <div class="recipe-head"><span class="rp-lab">Fremgangsmåte</span><span class="rp-time">~${rec.timeMin} min</span></div>
+    <ol class="recipe-steps">${rec.steps.map(s=>`<li>${escapeHtml(s)}</li>`).join("")}</ol>
+  </div>`;
+}
+
+async function wkEditName(m){
+  if(!m) return;
+  const span=document.getElementById("wkName-"+m.id); if(!span||span.dataset.editing==="1") return;
+  span.dataset.editing="1";
+  const old=(m.navn||"").trim();
+  span.innerHTML=`<input class="wk-nameinput" value="${escapeHtml(old)}" placeholder="F.eks. Hyttetur" maxlength="40">
+    <button class="swap" data-n="ok">Lagre</button><button class="swap" data-n="avbryt">Avbryt</button>`;
+  const inp=span.querySelector("input"); inp.focus();
+  const done=()=>{ span.dataset.editing="0"; window.MM_renderWeeks(); };
+  const save=async()=>{
+    const nytt=inp.value.trim()||null;
+    try{
+      const { data:{ user } }=await supabase.auth.getUser(); if(!user) return done();
+      const { error }=await supabase.from("menus").update({ navn:nytt }).eq("id",m.id).eq("user_id",user.id);
+      if(error) throw error;
+    }catch(e){ const ms=document.getElementById("wkMsg-"+m.id); if(ms){ ms.className="auth-msg err"; ms.textContent="Kunne ikke lagre navnet."; } }
+    done();
+  };
+  span.querySelector('[data-n="ok"]').addEventListener("click",save);
+  span.querySelector('[data-n="avbryt"]').addEventListener("click",done);
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter") save(); if(e.key==="Escape") done(); });
+}
+async function wkSetStatus(id,status){
+  const { data:{ user } }=await supabase.auth.getUser(); if(!user) return false;
+  const { data, error }=await supabase.from("menus").update({ status }).eq("id",id).eq("user_id",user.id).select("id");
+  if(error||!data||!data.length){ console.warn("Statusbytte feilet:",error); return false; }
+  return true;
+}
+window.MM_renderWeeks=async function(){
+  const cA=$("wkAktiv"), cP=$("wkPlanlagt"), cR=$("wkArkiv");
+  if(!cA||!cP||!cR) return;
+  wkMsg("","");
+  if(!supabase){ cA.innerHTML=`<div class="wk-empty">Supabase er utilgjengelig.</div>`; return; }
+  const { data:{ user } }=await supabase.auth.getUser();
+  if(!user){
+    cA.innerHTML=`<div class="wk-empty">Logg inn for å se ukene dine.</div>`;
+    cP.innerHTML=""; cR.innerHTML=""; return;
+  }
+  let rows=[];
+  try{
+    const { data, error }=await supabase.from("menus")
+      .select("id,navn,status,brukt,recipe_ids,meta,created_at")
+      .eq("user_id",user.id).order("created_at",{ascending:false});
+    if(error) throw error;
+    rows=data||[];
+  }catch(e){ wkMsg("err","Kunne ikke hente ukene dine: "+(e.message||e)); return; }
+
+  const akt=rows.filter(m=>m.status==="aktiv");
+  const plan=rows.filter(m=>m.status==="planlagt");
+  const ark=rows.filter(m=>m.status!=="aktiv"&&m.status!=="planlagt");
+
+  cA.innerHTML=""; cP.innerHTML=""; cR.innerHTML="";
+  if(!akt.length) cA.innerHTML=`<div class="wk-empty">Ingen aktiv uke. Lagre en meny fra «Lag ukesmeny», eller flytt en hit fra planlagte/arkivet.</div>`;
+  akt.forEach(m=>{
+    const bruk=m.brukt
+      ? `<button class="swap" data-wk="angrebruk" data-id="${m.id}" title="Fjerner uka fra statistikken og lar rettene gjentas igjen. Justerer ikke «Har hjemme».">Angre bruk</button>`
+      : `<button class="auth-btn" data-wk="bruk" data-id="${m.id}" title="Registrerer uka som brukt, så neste meny varierer rettene — og trekker fra beholdningen hvis den var i bruk.">Bruk denne menyen</button>`;
+    const el=wkCard(m,`${bruk}<button class="swap" data-wk="rediger" data-id="${m.id}">Rediger</button><button class="swap" data-wk="arkiver" data-id="${m.id}">Legg i arkiv</button>`);
+    cA.appendChild(el);
+  });
+  if(!plan.length) cP.innerHTML=`<div class="wk-empty">Ingen planlagte uker ennå.</div>`;
+  plan.forEach(m=>{
+    const el=wkCard(m,`<button class="swap" data-wk="aktiver" data-id="${m.id}">Sett som aktiv</button>
+      <button class="swap" data-wk="rediger" data-id="${m.id}">Rediger</button>
+      <button class="swap" data-wk="arkiver" data-id="${m.id}">Legg i arkiv</button>`);
+    cP.appendChild(el);
+  });
+  if(!ark.length) cR.innerHTML=`<div class="wk-empty">Arkivet er tomt.</div>`;
+  ark.forEach(m=>{
+    const el=wkCard(m,`<button class="swap" data-wk="aktiver" data-id="${m.id}">Tilbake til aktiv</button>
+      <button class="swap" data-wk="rediger" data-id="${m.id}">Rediger</button>
+      <button class="swap" data-wk="slett" data-id="${m.id}">Slett permanent</button>`);
+    cR.appendChild(el);
+  });
+
+  const rowsById={}; rows.forEach(x=>rowsById[x.id]=x);
+  const pg=document.getElementById("page-history");
+  pg.querySelectorAll("[data-open]").forEach(b=>b.addEventListener("click",()=>wkToggleOpen(rowsById[b.dataset.open],b)));
+  pg.querySelectorAll("[data-editname]").forEach(b=>b.addEventListener("click",()=>wkEditName(rowsById[b.dataset.editname])));
+  const harAktiv=akt.length>0;
+  pg.querySelectorAll("[data-wk]").forEach(b=>b.addEventListener("click",async()=>{
+    const id=b.dataset.id, act=b.dataset.wk;
+    const m=document.getElementById("wkMsg-"+id);
+    const setM=(t,txt)=>{ if(m){ m.className="auth-msg "+t; m.textContent=txt; } };
+    if(act==="rediger"){
+      const row=rowsById[id]; if(!row) return;
+      const ok=window.MM_loadWeekForEdit && window.MM_loadWeekForEdit(row.recipe_ids, row.meta, row.navn);
+      if(!ok){ setM("err","Rettene i denne uka finnes ikke lenger i databasen — den kan ikke redigeres."); return; }
+      mmCurrentWeekId=row.id;
+      if(window.MM_goto) window.MM_goto("plan");
+      return;
+    }
+    if(act==="angrebruk"){
+      b.disabled=true; b.textContent="Angrer …";
+      try{
+        const { data:{ user } }=await supabase.auth.getUser(); if(!user) throw new Error("Du må være innlogget.");
+        const { data, error }=await supabase.from("menus").update({ brukt:false }).eq("id",id).eq("user_id",user.id).select("id");
+        if(error) throw error;
+        if(!data||!data.length) throw new Error("Fikk ikke angret.");
+        if(window.MM_reloadRecent) await window.MM_reloadRecent();
+        await window.MM_renderWeeks();
+        wkMsg("ok","✓ Uka er ikke lenger merket brukt — den teller ikke i statistikken, og rettene kan komme igjen. «Har hjemme» er ikke endret.");
+      }catch(e){ b.disabled=false; b.textContent="Angre bruk"; setM("err",e.message||String(e)); }
+      return;
+    }
+    if(act==="bruk"){
+      const row=rowsById[id]; if(!row) return;
+      b.disabled=true; b.textContent="Registrerer …";
+      try{
+        const { data:{ user } }=await supabase.auth.getUser(); if(!user) throw new Error("Du må være innlogget.");
+        const { data, error }=await supabase.from("menus").update({ brukt:true }).eq("id",id).eq("user_id",user.id).select("id");
+        if(error) throw error;
+        if(!data||!data.length) throw new Error("Fikk ikke registrert uka.");
+        if(window.MM_addRecentRecipes) window.MM_addRecentRecipes(row.recipe_ids||[]);
+        let trakk=false;
+        if(row.meta&&row.meta.brukHjemme&&window.MM_shopBrukt&&window.MM_forbrukHarHjemme){
+          const brukt=window.MM_shopBrukt(row.recipe_ids||[],(row.meta&&Number(row.meta.persons))||2);
+          if(brukt&&Object.keys(brukt).length) trakk=await window.MM_forbrukHarHjemme(brukt);
+        }
+        await window.MM_renderWeeks();
+        wkMsg("ok", trakk
+          ? "✓ Uka er registrert som brukt — beholdningen er oppdatert, og neste meny varierer rettene."
+          : "✓ Uka er registrert som brukt — neste meny varierer rettene.");
+      }catch(e){
+        b.disabled=false; b.textContent="Bruk denne menyen";
+        setM("err",e.message||String(e));
+      }
+      return;
+    }
+    if(act==="aktiver"){
+      if(harAktiv){ setM("err","Det ligger allerede en uke som aktiv. Legg den i arkivet først, så blir plassen ledig."); return; }
+      if(await wkSetStatus(id,"aktiv")) window.MM_renderWeeks(); else setM("err","Kunne ikke flytte uka.");
+    }
+    if(act==="arkiver"){
+      if(await wkSetStatus(id,"arkivert")) window.MM_renderWeeks(); else setM("err","Kunne ikke arkivere uka.");
+    }
+    if(act==="slett"){
+      if(b.dataset.confirm!=="1"){ b.dataset.confirm="1"; b.textContent="Sikker? Slett for alltid"; setM("err","Dette kan ikke angres. Trykk en gang til for å slette."); return; }
+      const { data:{ user } }=await supabase.auth.getUser(); if(!user) return;
+      const { data, error }=await supabase.from("menus").delete().eq("id",id).eq("user_id",user.id).select("id");
+      if(error||!data||!data.length){ setM("err","Kunne ikke slette."); return; }
+      window.MM_renderWeeks();
+    }
+  }));
+};
+
+// Modal-knapper
+$("authClose").addEventListener("click",closeModal);
+modal.addEventListener("click",e=>{ if(e.target===modal) closeModal(); });
+
+$("authSignup").addEventListener("click",async()=>{
+  if(!supabase) return;
+  const email=$("authEmail").value.trim(), password=$("authPw").value;
+  try{
+    const { data, error }=await supabase.auth.signUp({ email, password });
+    if(error) throw error;
+    if(data.session){ showMsg("ok","Konto opprettet og innlogget!"); setTimeout(closeModal,800); }
+    else { showMsg("info","Konto opprettet. Bekreft e-posten, eller logg inn direkte hvis bekreftelse er av."); }
+  }catch(e){ showMsg("err",e.message||String(e)); }
+});
+
+$("authSignin").addEventListener("click",async()=>{
+  if(!supabase) return;
+  const email=$("authEmail").value.trim(), password=$("authPw").value;
+  try{
+    const { error }=await supabase.auth.signInWithPassword({ email, password });
+    if(error) throw error;
+    showMsg("ok","Innlogget!"); setTimeout(closeModal,600);
+  }catch(e){ showMsg("err",e.message||String(e)); }
+});
+
+// ---- Velg passord (invitasjon / tilbakestilling) ----
+const setPwModal=$("setPwModal");
+let mmSetPwStarted=false;
+
+// Venter til Supabase har fått en økt fra lenken (etableres asynkront etter klikk).
+async function mmWaitForSession(maxMs=6000){
+  const t0=Date.now();
+  while(Date.now()-t0<maxMs){
+    try{ const { data:{ session } }=await supabase.auth.getSession(); if(session) return session; }catch(e){}
+    await new Promise(r=>setTimeout(r,300));
+  }
+  return null;
+}
+
+// Åpner «velg passord» og slipper bare fram feltene når innloggingen faktisk er på plass.
+async function startSetPwFlow(){
+  if(!setPwModal || mmSetPwStarted) return;
+  mmSetPwStarted=true;
+  const fields=$("setPwFields"), m=$("setPwMsg");
+  setPwModal.hidden=false;
+  if(fields) fields.hidden=true;
+  m.className="auth-msg info"; m.textContent="Kobler til invitasjonen …";
+  const session=await mmWaitForSession();
+  if(session){
+    m.className="auth-msg"; m.textContent="";
+    if(fields) fields.hidden=false;
+    $("setPw1")?.focus();
+  }else{
+    m.className="auth-msg err";
+    m.textContent="Denne invitasjonslenken er utløpt eller allerede brukt. Be om en ny invitasjon, og åpne lenken i en vanlig nettleser så snart du får den.";
+  }
+}
+
+$("setPwSave")?.addEventListener("click",async()=>{
+  if(!supabase) return;
+  const p1=$("setPw1").value, p2=$("setPw2").value, m=$("setPwMsg");
+  const setM=(t,txt)=>{ m.className="auth-msg "+t; m.textContent=txt; };
+  if(p1.length<6){ setM("err","Passordet må ha minst 6 tegn."); return; }
+  if(p1!==p2){ setM("err","Passordene er ikke like."); return; }
+  try{
+    const { error }=await supabase.auth.updateUser({ password:p1 });
+    if(error) throw error;
+    setM("ok","✓ Passord lagret — du er klar!");
+    if(history.replaceState) history.replaceState(null,"",window.location.pathname+window.location.search);
+    setTimeout(()=>{ setPwModal.hidden=true; },1000);
+  }catch(e){
+    const txt=(e && (e.message||String(e)))||"";
+    if(/session|missing|JWT|token/i.test(txt)){
+      setM("err","Innloggingen fra lenken ble borte. Lenken er trolig utløpt eller allerede brukt — be om en ny invitasjon.");
+    }else{
+      setM("err",txt);
+    }
+  }
+});
+
+// Start: vis riktig tilstand og lytt på endringer
+if(supabase){
+  supabase.auth.onAuthStateChange((event,session)=>{
+    renderAuth(session?.user||null);
+    if(event==="PASSWORD_RECOVERY"){ startSetPwFlow(); }
+    if((event==="SIGNED_IN"||event==="INITIAL_SESSION") && session?.user){ loadProfile(session.user); loadRecent(session.user); loadPantry(session.user); }
+  });
+  if(MM_authFlow){ startSetPwFlow(); }
+  const { data:{ session } }=await supabase.auth.getSession();
+  renderAuth(session?.user||null);
+}else{
+  authArea.innerHTML="";
+}
+</script>
+</body>
+</html>
