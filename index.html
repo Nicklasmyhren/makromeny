@@ -748,15 +748,15 @@ let ING = {
   torskefilet:{n:"Torskefilet lettsaltet",kat:"Fisk",kcal:75,p:18.1,k:0,f:0.3,pg:570,pris:85.44,pk:"570 g",los:true},
   ris:{n:"Jasminris",kat:"Tørrvarer",kcal:360,p:7,k:79,f:0.6,pg:1000,pris:32,pk:"1 kg"},
   pasta:{n:"Pasta",kat:"Tørrvarer",kcal:359,p:12,k:72,f:1.5,pg:500,pris:19,pk:"500 g"},
-  poteter:{n:"Poteter",kat:"Frukt & grønt",kcal:75,p:2,k:16,f:0.1,pg:2000,pris:35,pk:"2 kg",los:true},
+  poteter:{n:"Poteter",kat:"Frukt & grønt",kcal:75,p:2,k:16,f:0.1,pg:2000,pris:35,pk:"2 kg",los:true,eg:90,en:"potet",ef:"poteter"},
   egg:{n:"Egg frittgående 12 stk",kat:"Meieri & egg",kcal:149,p:13,k:0.3,f:10.6,pg:700,pris:65.9,pk:"12 stk"},
   olivenolje:{n:"Olivenolje",kat:"Tørrvarer",kcal:884,p:0,k:0,f:100,pg:500,pris:55,pk:"500 ml"},
-  lok:{n:"Løk gul",kat:"Frukt & grønt",kcal:32,p:1.1,k:5.7,f:0.1,pg:1000,pris:29.9,pk:"1 kg",los:true},
-  hvitlok:{n:"Hvitløk",kat:"Frukt & grønt",kcal:149,p:6,k:30,f:0.5,pg:150,pris:18,pk:"150 g",los:true},
-  paprika:{n:"Paprika rød",kat:"Frukt & grønt",kcal:26,p:0.8,k:4.2,f:0.2,pg:180,pris:14.38,pk:"180 g",los:true},
-  gulrot:{n:"Gulrot",kat:"Frukt & grønt",kcal:41,p:0.9,k:9,f:0.2,pg:1000,pris:20,pk:"1 kg",los:true},
-  brokkoli:{n:"Brokkoli",kat:"Frukt & grønt",kcal:28,p:3.2,k:1.9,f:0.3,pg:350,pris:21.9,pk:"1 stk",los:true},
-  squash:{n:"Squash",kat:"Frukt & grønt",kcal:17,p:1.2,k:3,f:0.3,pg:300,pris:22,pk:"1 stk",los:true},
+  lok:{n:"Løk gul",kat:"Frukt & grønt",kcal:32,p:1.1,k:5.7,f:0.1,pg:1000,pris:29.9,pk:"1 kg",los:true,eg:110,en:"løk",ef:"løk"},
+  hvitlok:{n:"Hvitløk",kat:"Frukt & grønt",kcal:149,p:6,k:30,f:0.5,pg:150,pris:18,pk:"150 g",los:true,eg:55,en:"hvitløk",ef:"hvitløk"},
+  paprika:{n:"Paprika rød",kat:"Frukt & grønt",kcal:26,p:0.8,k:4.2,f:0.2,pg:180,pris:14.38,pk:"180 g",los:true,eg:160,en:"paprika",ef:"paprika"},
+  gulrot:{n:"Gulrot",kat:"Frukt & grønt",kcal:41,p:0.9,k:9,f:0.2,pg:1000,pris:20,pk:"1 kg",los:true,eg:75,en:"gulrot",ef:"gulrøtter"},
+  brokkoli:{n:"Brokkoli",kat:"Frukt & grønt",kcal:28,p:3.2,k:1.9,f:0.3,pg:350,pris:21.9,pk:"1 stk",los:true,eg:350,en:"brokkoli",ef:"brokkoli"},
+  squash:{n:"Squash",kat:"Frukt & grønt",kcal:17,p:1.2,k:3,f:0.3,pg:300,pris:22,pk:"1 stk",los:true,eg:250,en:"squash",ef:"squash"},
   knusteTomater:{n:"Finhakkede tomater",kat:"Hermetikk",kcal:30,p:1.6,k:5,f:0.2,pg:400,pris:23.6,pk:"400 g"},
   tortilla:{n:"Tortillalefser",kat:"Bakevarer",kcal:310,p:8,k:50,f:7,pg:320,pris:12.9,pk:"8 stk"},
   romme:{n:"Lettrømme Tine",kat:"Meieri & egg",kcal:179,p:2.8,k:3.7,f:17,pg:300,pris:24.9,pk:"300 g"},
@@ -962,7 +962,8 @@ window.mmApplyData=function(ingRader,rettRader,koblinger){
   const nyING={};
   ingRader.forEach(r=>{
     nyING[r.id]={n:r.navn,kat:r.kategori,kcal:Number(r.kcal),p:Number(r.protein),k:Number(r.karbo),
-                 f:Number(r.fett),pg:Number(r.pakke_gram),pris:Number(r.pris),pk:r.pakke_tekst,los:!!r.losvekt};
+                 f:Number(r.fett),pg:Number(r.pakke_gram),pris:Number(r.pris),pk:r.pakke_tekst,los:!!r.losvekt,
+                 eg:r.enhet_gram?Number(r.enhet_gram):null,en:r.enhet_navn||null,ef:r.enhet_flertall||null};
   });
   const nyAll={gluten:new Set(),melk:new Set(),egg:new Set(),fisk:new Set(),soya:new Set(),
                "nøtter":new Set(),skalldyr:new Set(),sesam:new Set(),selleri:new Set()};
@@ -1223,7 +1224,8 @@ function buildShopping(plan,persons){
     const har = bruk ? Math.min(harHjemme[id]||0, need) : 0;   // felles lager for hele uka
     if(har>0) brukt[id]=har;
     const rest = Math.max(0, need-har);
-    const utenHjemme = los ? need*perGram : Math.max(1,Math.ceil(need/it.pg))*it.pris;
+    const utenHjemme = los ? (it.eg ? Math.max(1,Math.ceil(need/it.eg))*it.eg*perGram : need*perGram)
+                           : Math.max(1,Math.ceil(need/it.pg))*it.pris;
     if(rest<=0){                                   // du har nok — ingen kjøp
       dekket.push({navn:it.n, brukt:har});
       spart += utenHjemme;
@@ -1231,7 +1233,13 @@ function buildShopping(plan,persons){
     }
     let packs,cost,mengde;
     if(los){
-      packs=1; cost=rest*perGram; mengde=pentGram(rest);       // betal for det du faktisk trenger
+      if(it.eg){                                              // telles i stk: 287 g løk -> 3 løk
+        const stk=Math.max(1,Math.ceil(rest/it.eg));
+        packs=stk; cost=stk*it.eg*perGram;
+        mengde=stk+" "+(stk===1?(it.en||"stk"):(it.ef||it.en||"stk"));
+      }else{
+        packs=1; cost=rest*perGram; mengde=pentGram(rest);     // etter vekt: kjøtt, fisk, sopp
+      }
     }else{
       packs=Math.max(1,Math.ceil(rest/it.pg)); cost=packs*it.pris; mengde=null;
     }
