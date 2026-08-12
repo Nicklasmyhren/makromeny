@@ -221,6 +221,21 @@
   /* ---------- ADMIN ---------- */
   .adm-list{display:flex;flex-direction:column;gap:10px;}
   .adm-row{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 16px;box-shadow:var(--shadow);}
+
+  /* admin-faner + Kassal-prisverktøy */
+  .adm-tabs{display:flex;gap:8px;margin:0 0 18px;border-bottom:1px solid var(--line);}
+  .adm-tab{cursor:pointer;font:inherit;font-size:13.5px;font-weight:600;background:none;border:none;
+    padding:9px 15px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .adm-tab:hover{color:var(--ink);}
+  .adm-tab.active{color:var(--spruce);border-bottom-color:var(--spruce);}
+  .kas-search{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap;}
+  .kas-search input{flex:1;min-width:190px;font:inherit;font-size:13.5px;padding:8px 11px;border:1px solid var(--line);border-radius:8px;}
+  .kas-hit{display:flex;align-items:center;gap:11px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;margin-top:7px;background:#fbfcfa;flex-wrap:wrap;}
+  .kas-hit:hover{border-color:#cfe1ce;}
+  .kas-navn{flex:1;min-width:170px;font-size:13px;}
+  .kas-meta{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;}
+  .kas-pris{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;color:var(--kroner);white-space:nowrap;}
+  .kas-note{font-size:11.5px;color:var(--muted);margin-top:8px;font-style:italic;}
   .adm-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .adm-name{font-weight:600;font-size:14.5px;flex:1;min-width:180px;}
   .adm-chip{font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--muted);white-space:nowrap;}
@@ -627,10 +642,23 @@
 
 <section class="page" id="page-admin" hidden>
   <div class="page-plain">
-    <h2>Admin — fremgangsmåter</h2>
-    <p class="psub">Generer og godkjenn en fast fremgangsmåte for hver rett. Regelen: mengde-nøytral — ingen absolutte mengder, bare relative formuleringer. Steg som ser ut til å bryte regelen, markeres gult.</p>
-    <p class="psub" id="admStatus"></p>
-    <div class="adm-list" id="admList"></div>
+    <h2>Admin</h2>
+    <div class="adm-tabs">
+      <button class="adm-tab active" data-admtab="fremgang">Fremgangsmåter</button>
+      <button class="adm-tab" data-admtab="priser">Priser (Kassal)</button>
+    </div>
+
+    <div id="admTab-fremgang">
+      <p class="psub">Generer og godkjenn en fast fremgangsmåte for hver rett. Regelen: mengde-nøytral — ingen absolutte mengder, bare relative formuleringer. Steg som ser ut til å bryte regelen, markeres gult.</p>
+      <p class="psub" id="admStatus"></p>
+      <div class="adm-list" id="admList"></div>
+    </div>
+
+    <div id="admTab-priser" hidden>
+      <p class="psub">Søk opp hver råvare i Kassal og velg riktig produkt. Da lagres pris, pakkevekt og produktets ID. Enhetsvekten (den som gir «3 løk») røres ikke — den er håndsatt.</p>
+      <p class="psub" id="prisStatus"></p>
+      <div class="adm-list" id="prisList"></div>
+    </div>
   </div>
 </section>
 
@@ -646,7 +674,12 @@
     Object.entries(PAGES).forEach(([k,id])=>{ const el=document.getElementById(id); if(el) el.hidden=(k!==name); });
     document.querySelectorAll(".tb-link[data-nav]").forEach(b=>b.classList.toggle("is-here",b.dataset.nav===name));
     if(nav) nav.classList.remove("open");
-    if(name==="admin"&&window.MM_renderAdmin) window.MM_renderAdmin();
+    if(name==="admin"&&window.MM_renderAdmin){
+      window.MM_renderAdmin();
+      document.querySelectorAll("[data-admtab]").forEach(b=>{
+        if(!b.dataset.bound){ b.dataset.bound="1"; b.addEventListener("click",()=>kasFane(b.dataset.admtab)); }
+      });
+    }
     if(name==="history"&&window.MM_renderWeeks) window.MM_renderWeeks();
     if(name==="stats-okonomi"&&window.MM_renderOkonomi) window.MM_renderOkonomi();
     if(name==="stats-mat"&&window.MM_renderMat) window.MM_renderMat();
@@ -963,7 +996,8 @@ window.mmApplyData=function(ingRader,rettRader,koblinger){
   ingRader.forEach(r=>{
     nyING[r.id]={n:r.navn,kat:r.kategori,kcal:Number(r.kcal),p:Number(r.protein),k:Number(r.karbo),
                  f:Number(r.fett),pg:Number(r.pakke_gram),pris:Number(r.pris),pk:r.pakke_tekst,los:!!r.losvekt,
-                 eg:r.enhet_gram?Number(r.enhet_gram):null,en:r.enhet_navn||null,ef:r.enhet_flertall||null};
+                 eg:r.enhet_gram?Number(r.enhet_gram):null,en:r.enhet_navn||null,ef:r.enhet_flertall||null,
+                 kid:r.kassal_id||null};
   });
   const nyAll={gluten:new Set(),melk:new Set(),egg:new Set(),fisk:new Set(),soya:new Set(),
                "nøtter":new Set(),skalldyr:new Set(),sesam:new Set(),selleri:new Set()};
@@ -1962,6 +1996,125 @@ function mmParseRecipeJSON(raw){
   const a=s.indexOf("{"), b=s.lastIndexOf("}");
   if(a>=0 && b>a){ return JSON.parse(s.slice(a,b+1)); }
   throw new Error("fant ingen gyldig JSON i svaret");
+}
+
+/* ---------- ADMIN: KASSAL-PRISVERKTØY ---------- */
+// Du søker opp riktig produkt og velger det. Da lagres pris + pakkevekt (som gir pris/gram)
+// og kassal_id. Enhetsvekten (enhet_gram, som gir «3 løk») røres ALDRI — den er håndsatt.
+function kasFane(navn){
+  document.querySelectorAll("[data-admtab]").forEach(b=>b.classList.toggle("active",b.dataset.admtab===navn));
+  const f=document.getElementById("admTab-fremgang"), p=document.getElementById("admTab-priser");
+  if(f) f.hidden = navn!=="fremgang";
+  if(p) p.hidden = navn!=="priser";
+  if(navn==="priser") window.MM_renderPriser();
+  if(navn==="fremgang"&&window.MM_renderAdmin) window.MM_renderAdmin();
+}
+
+window.MM_renderPriser=function(){
+  const list=document.getElementById("prisList"), st=document.getElementById("prisStatus");
+  if(!list) return;
+  const ids=Object.keys(ING||{});
+  if(!ids.length){ list.innerHTML=`<div class="soon">Råvarene er ikke lastet ennå — vent et øyeblikk og prøv igjen.</div>`; return; }
+  const medId=ids.filter(id=>ING[id].kid).length;
+  if(st) st.textContent=`${medId} av ${ids.length} råvarer er koblet til et Kassal-produkt.`;
+  // Ukoblede først — da ser du hva som gjenstår
+  const sortert=ids.slice().sort((a,b)=>{
+    const ka=ING[a].kid?1:0, kb=ING[b].kid?1:0;
+    return ka-kb || ING[a].n.localeCompare(ING[b].n,"no");
+  });
+  list.innerHTML="";
+  sortert.forEach(id=>{
+    const it=ING[id];
+    const row=document.createElement("div"); row.className="adm-row";
+    row.innerHTML=`<div class="adm-top">
+        <span class="adm-name">${escapeHtml(it.n)}</span>
+        <span class="adm-chip ${it.kid?"ok":""}">${it.kid?"✓ Koblet":"Ikke koblet"}</span>
+        <span class="kas-meta">${fmt(it.pris)} kr / ${it.pg} g</span>
+        <button class="swap" data-kas="${id}">${it.kid?"Bytt produkt":"Søk i Kassal"}</button>
+      </div>
+      <div class="adm-body" id="kasBody-${id}"></div>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll("[data-kas]").forEach(b=>b.addEventListener("click",()=>kasOpen(b.dataset.kas)));
+};
+
+function kasOpen(id){
+  const it=ING[id], body=document.getElementById("kasBody-"+id);
+  if(!it||!body) return;
+  if(body.dataset.open==="1"){ body.innerHTML=""; body.dataset.open="0"; return; }
+  body.dataset.open="1";
+  body.innerHTML=`<div class="kas-search">
+      <input id="kasQ-${id}" value="${escapeHtml(it.n)}" placeholder="Søkeord til Kassal">
+      <button class="swap" id="kasGo-${id}">Søk</button>
+    </div>
+    <div id="kasRes-${id}"></div>`;
+  const go=()=>kasSok(id);
+  document.getElementById("kasGo-"+id).addEventListener("click",go);
+  document.getElementById("kasQ-"+id).addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
+  kasSok(id);
+}
+
+async function kasSok(id){
+  const res=document.getElementById("kasRes-"+id);
+  const q=(document.getElementById("kasQ-"+id)||{}).value||"";
+  if(!res) return;
+  if(!q.trim()){ res.innerHTML=`<div class="rp-err">Skriv et søkeord.</div>`; return; }
+  res.innerHTML=`<div class="loading-sm"><span class="spinner sp-dark"></span> Søker i Kassal …</div>`;
+  let data;
+  try{
+    const r=await fetch("/.netlify/functions/kassal?search="+encodeURIComponent(q.trim()));
+    data=await r.json();
+    if(!r.ok||data.error) throw new Error(data.error||("Feil "+r.status));
+  }catch(e){ res.innerHTML=`<div class="rp-err">Kunne ikke søke: ${escapeHtml(e.message||String(e))}</div>`; return; }
+
+  const treff=(data.products||[]).filter(p=>p.price&&p.weight);
+  if(!treff.length){ res.innerHTML=`<div class="rp-err">Ingen treff med både pris og vekt. Prøv et annet søkeord.</div>`; return; }
+  const it=ING[id];
+  res.innerHTML=treff.slice(0,12).map((p,i)=>{
+    const g=kasGram(p.weight,p.weightUnit);
+    const perG=g?(p.price/g):null;
+    return `<div class="kas-hit">
+      <span class="kas-navn">${escapeHtml(p.name||"(uten navn)")}${p.store?` <span class="kas-meta">· ${escapeHtml(p.store)}</span>`:""}</span>
+      <span class="kas-meta">${g?g+" g":"ukjent vekt"}</span>
+      <span class="kas-pris">${fmt(p.price)} kr${perG?` <span class="kas-meta">(${(perG*100).toFixed(2)}/100g)</span>`:""}</span>
+      <button class="swap" data-pick="${i}" data-for="${id}">Velg</button>
+    </div>`;
+  }).join("")+
+  `<p class="kas-note">Velger du et produkt, lagres pris og pakkevekt${it.eg?" — enhetsvekten på "+it.eg+" g per "+(it.en||"stk")+" beholdes":""}.</p>`;
+  res.querySelectorAll("[data-pick]").forEach(b=>b.addEventListener("click",()=>kasVelg(id,treff[Number(b.dataset.pick)],b)));
+}
+
+function kasGram(w,unit){
+  const n=Number(w); if(!n||isNaN(n)) return null;
+  const u=(unit||"g").toLowerCase();
+  if(u==="kg") return Math.round(n*1000);
+  if(u==="l") return Math.round(n*1000);
+  if(u==="dl") return Math.round(n*100);
+  if(u==="ml"||u==="g") return Math.round(n);
+  return Math.round(n);
+}
+
+async function kasVelg(id,p,btn){
+  const g=kasGram(p.weight,p.weightUnit);
+  if(!g||!p.price){ alert("Produktet mangler pris eller vekt."); return; }
+  btn.disabled=true; btn.textContent="Lagrer …";
+  try{
+    if(!supabase) throw new Error("Supabase mangler.");
+    const { data:{ user } }=await supabase.auth.getUser();
+    if(!user) throw new Error("Du må være innlogget.");
+    const { data, error }=await supabase.from("ingredienser")
+      .update({ pris:p.price, pakke_gram:g, pakke_tekst:(p.weightUnit==="kg"?(p.weight+" kg"):(g+" g")), kassal_id:String(p.ean||p.url||p.name) })
+      .eq("id",id).select("id");
+    if(error) throw error;
+    if(!data||!data.length) throw new Error("Ingen rad ble oppdatert — mangler du admin-rettighet på ingredienser?");
+    // Oppdater i minnet så lista viser nytt med en gang
+    ING[id].pris=p.price; ING[id].pg=g; ING[id].kid=String(p.ean||p.url||p.name);
+    if(typeof mmBeregnAvledet==="function") mmBeregnAvledet();
+    window.MM_renderPriser();
+  }catch(e){
+    btn.disabled=false; btn.textContent="Velg";
+    alert("Kunne ikke lagre: "+(e.message||e));
+  }
 }
 
 window.MM_renderAdmin=function(){
