@@ -677,7 +677,7 @@
     if(name==="admin"&&window.MM_renderAdmin){
       window.MM_renderAdmin();
       document.querySelectorAll("[data-admtab]").forEach(b=>{
-        if(!b.dataset.bound){ b.dataset.bound="1"; b.addEventListener("click",()=>kasFane(b.dataset.admtab)); }
+        if(!b.dataset.bound){ b.dataset.bound="1"; b.addEventListener("click",()=>window.kasFane(b.dataset.admtab)); }
       });
     }
     if(name==="history"&&window.MM_renderWeeks) window.MM_renderWeeks();
@@ -2001,7 +2001,7 @@ function mmParseRecipeJSON(raw){
 /* ---------- ADMIN: KASSAL-PRISVERKTØY ---------- */
 // Du søker opp riktig produkt og velger det. Da lagres pris + pakkevekt (som gir pris/gram)
 // og kassal_id. Enhetsvekten (enhet_gram, som gir «3 løk») røres ALDRI — den er håndsatt.
-function kasFane(navn){
+window.kasFane=function(navn){
   document.querySelectorAll("[data-admtab]").forEach(b=>b.classList.toggle("active",b.dataset.admtab===navn));
   const f=document.getElementById("admTab-fremgang"), p=document.getElementById("admTab-priser");
   if(f) f.hidden = navn!=="fremgang";
