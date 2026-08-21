@@ -660,6 +660,11 @@
     <div id="admTab-priser" hidden>
       <p class="psub">Søk opp hver råvare i Kassal og velg riktig produkt. Da lagres pris, pakkevekt og produktets ID. Enhetsvekten (den som gir «3 løk») røres ikke — den er håndsatt.</p>
       <p class="psub" id="prisStatus"></p>
+      <div class="adm-actions" style="margin-bottom:14px;">
+        <button class="auth-btn" id="prisOppdater">Oppdater alle priser fra Kassal</button>
+        <span class="use-menu-hint">Henter fersk pris for hver råvare du har koblet, via produktets strekkode. Vekt og enhetsvekt røres ikke.</span>
+      </div>
+      <div id="prisLogg"></div>
       <div class="adm-list" id="prisList"></div>
     </div>
   </div>
@@ -2017,6 +2022,58 @@ window.kasFane=function(navn){
   if(navn==="fremgang"&&window.MM_renderAdmin) window.MM_renderAdmin();
 }
 
+// Oppdaterer prisen på alle koblede råvarer ved å slå opp strekkoden på nytt.
+// Trygt: samme strekkode = samme produkt, så ingen risiko for å treffe feil vare.
+function kasErEan(v){ return typeof v==="string" && /^\d{8,14}$/.test(v.trim()); }
+
+async function kasOppdaterAlle(btn){
+  const logg=document.getElementById("prisLogg");
+  const koblet=Object.keys(ING).filter(id=>kasErEan(ING[id].kid));
+  const utenEan=Object.keys(ING).filter(id=>ING[id].kid&&!kasErEan(ING[id].kid));
+  if(!koblet.length){
+    if(logg) logg.innerHTML=`<div class="wk-empty">Ingen råvarer har en strekkode lagret ennå. Koble noen først med «Søk i Kassal».</div>`;
+    return;
+  }
+  btn.disabled=true;
+  let endret=0, uendret=0, feilet=0;
+  const linjer=[];
+  for(let i=0;i<koblet.length;i++){
+    const id=koblet[i], it=ING[id];
+    btn.textContent=`Oppdaterer … ${i+1} av ${koblet.length}`;
+    try{
+      const r=await fetch("/.netlify/functions/kassal?ean="+encodeURIComponent(it.kid));
+      const d=await r.json();
+      if(!r.ok||d.error) throw new Error(d.error||("Feil "+r.status));
+      const p=(d.products||[]).find(x=>Number(x.price)>0);
+      if(!p) throw new Error("fant ingen pris");
+      const ny=Number(p.price);
+      if(Math.abs(ny-Number(it.pris))<0.005){ uendret++; }
+      else{
+        const { data:{ user } }=await supabase.auth.getUser();
+        const { data, error }=await supabase.from("ingredienser").update({ pris:ny }).eq("id",id).select("id");
+        if(error||!data||!data.length) throw new Error(error?error.message:"ikke lagret");
+        const gammel=Number(it.pris); it.pris=ny; endret++;
+        linjer.push(`<div class="bar-row"><span class="bar-lab">${escapeHtml(it.n)}</span>
+          <span class="bar-val" style="flex:1">${fmt(gammel)} kr → ${fmt(ny)} kr</span>
+          <span class="kas-meta">${ny>gammel?"↑":"↓"} ${fmt(Math.abs(ny-gammel))} kr</span></div>`);
+      }
+    }catch(e){
+      feilet++;
+      linjer.push(`<div class="bar-row"><span class="bar-lab">${escapeHtml(it.n)}</span>
+        <span class="bar-val" style="flex:1;color:var(--muted)">kunne ikke oppdateres — ${escapeHtml(String(e.message||e))}</span></div>`);
+    }
+    await new Promise(r=>setTimeout(r,150));   // vær grei mot Kassal
+  }
+  if(typeof mmBeregnAvledet==="function") mmBeregnAvledet();
+  btn.disabled=false; btn.textContent="Oppdater alle priser fra Kassal";
+  if(logg) logg.innerHTML=`<div class="stat-block">
+    <h3>Prisoppdatering ferdig</h3>
+    <p class="psub">${endret} endret · ${uendret} uendret · ${feilet} kunne ikke hentes${utenEan.length?` · ${utenEan.length} mangler strekkode og ble hoppet over`:""}</p>
+    ${linjer.length?linjer.join(""):`<div class="wk-empty">Ingen priser hadde endret seg.</div>`}
+  </div>`;
+  window.MM_renderPriser();
+}
+
 window.MM_renderPriser=function(){
   const list=document.getElementById("prisList"), st=document.getElementById("prisStatus");
   if(!list) return;
@@ -2043,6 +2100,8 @@ window.MM_renderPriser=function(){
     list.appendChild(row);
   });
   list.querySelectorAll("[data-kas]").forEach(b=>b.addEventListener("click",()=>kasOpen(b.dataset.kas)));
+  const ob=document.getElementById("prisOppdater");
+  if(ob&&!ob.dataset.bound){ ob.dataset.bound="1"; ob.addEventListener("click",()=>kasOppdaterAlle(ob)); }
 };
 
 function kasOpen(id){
