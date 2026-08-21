@@ -38,6 +38,18 @@ export default async (request) => {
       return f && typeof f.amount === "number" ? f.amount : null;
     };
 
+    // Pris og vekt kommer i ulike former: tall, tekst, eller objekt ({price, date}).
+    // Strekkode-oppslaget og søket svarer ikke likt, så vi graver ut tallet uansett form.
+    const tall = (v, dybde = 0) => {
+      if (v == null || dybde > 3) return null;
+      if (typeof v === "number") return isFinite(v) ? v : null;
+      if (typeof v === "string") { const n = parseFloat(v.replace(",", ".")); return isNaN(n) ? null : n; }
+      if (typeof v === "object") {
+        return tall(v.price ?? v.current_price ?? v.amount ?? v.value ?? v.kr, dybde + 1);
+      }
+      return null;
+    };
+
     // EAN-oppslaget svarer i et annet format enn søket, så vi normaliserer begge
     // til samme liste. Noen felt (vekt, navn) kan ligge på «foreldre»-objektet.
     const rot = data.data;
@@ -48,10 +60,10 @@ export default async (request) => {
 
     const products = liste.map((p) => ({
       name: p.name ?? forelder?.name ?? null,
-      store: p.store?.name ?? p.store ?? null,
-      price: p.current_price ?? p.price ?? null,
-      unitPrice: p.current_unit_price ?? p.unit_price ?? null,
-      weight: p.weight ?? forelder?.weight ?? null,
+      store: p.store?.name ?? (typeof p.store === "string" ? p.store : null),
+      price: tall(p.current_price ?? p.price),
+      unitPrice: tall(p.current_unit_price ?? p.unit_price),
+      weight: tall(p.weight ?? forelder?.weight),
       weightUnit: p.weight_unit ?? forelder?.weight_unit ?? null,
       ean: p.ean ?? forelder?.ean ?? null,
       image: p.image ?? forelder?.image ?? null,
@@ -61,9 +73,20 @@ export default async (request) => {
       protein: nut(p.nutrition ?? forelder?.nutrition, "protein"),
       carbs: nut(p.nutrition ?? forelder?.nutrition, "karbohydrater"),
       fat: nut(p.nutrition ?? forelder?.nutrition, "fett_totalt"),
-    })).filter((p) => p.price != null);
+    })).filter((p) => typeof p.price === "number" && p.price > 0);
 
-    return json({ search: search || null, ean: ean || null, count: products.length, products });
+    // Fant vi ingenting? Ta med et lite hint om hvordan svaret faktisk så ut,
+    // så feilsøking ikke blir gjetting.
+    const svar = { search: search || null, ean: ean || null, count: products.length, products };
+    if (!products.length) {
+      const p0 = liste[0] || null;
+      svar.hint = {
+        antallRader: liste.length,
+        felter: p0 ? Object.keys(p0).slice(0, 25) : (forelder ? Object.keys(forelder).slice(0, 25) : []),
+        prisFelt: p0 ? { current_price: p0.current_price, price: p0.price } : null,
+      };
+    }
+    return json(svar);
   } catch (err) {
     return json({ error: "Serverfeil", detail: String(err) }, 500);
   }
