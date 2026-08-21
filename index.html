@@ -183,7 +183,7 @@
   .tb-burger{display:none;cursor:pointer;border:1px solid var(--line);background:#fbfcfa;border-radius:8px;font-size:18px;line-height:1;padding:7px 11px;color:var(--spruce);}
   @media (max-width:860px){
     .topbar{position:sticky;top:0;z-index:200;background:#fff !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}
-    .tb-nav{position:fixed;top:60px;left:0;right:0;background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line);flex-direction:column;gap:0;display:none;box-shadow:0 10px 30px rgba(20,36,28,.16);z-index:199;}
+    .tb-nav{position:fixed;top:60px;left:0;right:0;background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line);flex-direction:column;gap:0;display:none;box-shadow:0 10px 30px rgba(20,36,28,.16);z-index:250;}
     .tb-nav.open{display:flex;}
     .tb-link{padding:15px 20px;border-bottom:1px solid var(--line);border-left:3px solid transparent;text-align:left;background:#fff;}
     .tb-link.is-here{border-bottom-color:var(--line);border-left-color:var(--spruce-2);}
@@ -303,7 +303,9 @@
   body::before{content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.035;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)'/%3E%3C/svg%3E");}
   .topbar{background:rgba(255,255,255,.86);backdrop-filter:saturate(1.3) blur(8px);-webkit-backdrop-filter:saturate(1.3) blur(8px);}
-  main,.topbar,.auth-modal{position:relative;z-index:2;}
+  main{position:relative;z-index:2;}
+  .topbar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid var(--line);}
+  .auth-modal{position:relative;z-index:300;}
 
   .ticker{position:relative;margin-top:52px;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);background:rgba(255,255,255,.6);overflow:hidden;padding:11px 0;}
   .ticker-track{display:inline-flex;gap:34px;white-space:nowrap;will-change:transform;animation:tick 60s linear infinite;}
