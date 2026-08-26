@@ -1376,7 +1376,7 @@ window.MM_loadWeekForEdit=function(ids,meta,navn){
   const plan=(ids||[]).map(id=>RECIPES.find(r=>r.id===id)).filter(Boolean);
   if(!plan.length) return false;
   meta=meta||{};
-  state.dinners=Math.min(7,Math.max(3,plan.length));
+  state.dinners=Math.min(7,Math.max(1,plan.length));
   state.persons=Math.min(6,Math.max(1,Number(meta.persons)||state.persons));
   const dv=document.getElementById("dinnersVal"); if(dv) dv.textContent=state.dinners;
   const pv=document.getElementById("personsVal"); if(pv) pv.textContent=state.persons;
@@ -1688,7 +1688,7 @@ kjSearch.addEventListener("input",renderKjList);
 renderKjChips(); renderKjList();
 document.querySelectorAll('[data-step] button').forEach(b=>b.addEventListener("click",()=>{
   const which=b.closest("[data-step]").dataset.step,d=parseInt(b.dataset.d,10);
-  if(which==="dinners"){state.dinners=Math.min(7,Math.max(3,state.dinners+d));document.getElementById("dinnersVal").textContent=state.dinners;}
+  if(which==="dinners"){state.dinners=Math.min(7,Math.max(1,state.dinners+d));document.getElementById("dinnersVal").textContent=state.dinners;}
   else{state.persons=Math.min(6,Math.max(1,state.persons+d));document.getElementById("personsVal").textContent=state.persons;}
 }));
 document.getElementById("freeText").addEventListener("input",e=>state.freeText=e.target.value);
@@ -1728,7 +1728,7 @@ window.MM_applySettings=(p)=>{
   const setSeg=(grp,val)=>document.querySelectorAll('#'+grp+' button').forEach(b=>b.classList.toggle('is-active',b.dataset.v===val));
   if(p.goal){ state.goal=p.goal; setSeg('goal',p.goal); }
   if(p.preference){ state.pref=p.preference; setSeg('pref',p.preference); }
-  if(p.dinners){ state.dinners=Math.min(7,Math.max(3,p.dinners)); document.getElementById('dinnersVal').textContent=state.dinners; }
+  if(p.dinners){ state.dinners=Math.min(7,Math.max(1,p.dinners)); document.getElementById('dinnersVal').textContent=state.dinners; }
   if(p.persons){ state.persons=Math.min(6,Math.max(1,p.persons)); document.getElementById('personsVal').textContent=state.persons; }
   if(typeof p.freetext==='string'){ state.freeText=p.freetext; document.getElementById('freeText').value=p.freetext; }
 };
@@ -2152,11 +2152,15 @@ async function kasSok(id){
 
 function kasGram(w,unit){
   const n=Number(w); if(!n||isNaN(n)) return null;
-  const u=(unit||"g").toLowerCase();
-  if(u==="kg") return Math.round(n*1000);
-  if(u==="l") return Math.round(n*1000);
+  const u=(unit||"").toString().toLowerCase().trim();
+  // Liter/kilo (også skrevet helt ut) => gram/ml antas 1:1 med vann
+  if(u==="kg"||u==="kilo"||u==="kilogram"||u==="l"||u==="liter"||u==="ltr") return Math.round(n*1000);
   if(u==="dl") return Math.round(n*100);
-  if(u==="ml"||u==="g") return Math.round(n);
+  if(u==="cl") return Math.round(n*10);
+  if(u==="ml"||u==="g"||u==="gram"||u==="milliliter") return Math.round(n);
+  // Ukjent eller manglende enhet: en pakke på «1» eller «2» er nesten helt sikkert
+  // liter/kilo (olje, melk, ris), ikke 1 gram. Tolk små heltall som kilo/liter.
+  if(n<=5) return Math.round(n*1000);
   return Math.round(n);
 }
 
