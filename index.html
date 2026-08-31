@@ -159,6 +159,8 @@
   .r-line .r-lead{flex:0 0 12px;border-bottom:1px dotted var(--line);align-self:flex-end;height:9px;}
   .r-line .r-price{font-weight:500;white-space:nowrap;}
   .r-total{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--ink);margin-top:12px;padding-top:12px;font-family:'IBM Plex Mono',monospace;}
+  .dek-head{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;color:var(--muted);border-top:1px dashed var(--line);margin-top:14px;padding-top:12px;}
+  .dek-line{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);padding:3px 0;}
   .r-total .t-lab{font-weight:600;font-size:14px;letter-spacing:.04em;}
   .r-total .t-val{font-weight:600;font-size:22px;color:var(--kroner);}
   .r-foot{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);text-align:center;margin-top:12px;border-top:1px dashed var(--line);padding-top:11px;}
@@ -1362,16 +1364,35 @@ window.MM_buildWeekHTML=function(ids,persons,uid){
       <div class="recipe-panel" id="wkRecipe-${uid}-${r.id}"></div>
     </div></div>`;
   }).join("");
-  // Handlelista vises uten «Har hjemme»-fratrekk: beholdningen kan ha endret seg siden uka ble lagret.
-  const prev=state.brukHarHjemme; state.brukHarHjemme=false;
-  const shop=buildShopping(plan,p);
+  // To lister med hver sin jobb:
+  //  1) «Alt uka trenger» — hele behovet, til matlagingen. Uavhengig av beholdning.
+  //  2) «Handleliste» — kun det du må kjøpe, med «Har hjemme» trukket fra (slik den er NÅ).
+  const prev=state.brukHarHjemme;
+  state.brukHarHjemme=false;
+  const alt=buildShopping(plan,p);
+  state.brukHarHjemme=true;
+  const kjop=buildShopping(plan,p);
   state.brukHarHjemme=prev;
-  const rows=shop.lines.map(l=>`<div class="r-line"><span class="r-name">${l.navn}${l.los?` <small>${l.mengde}</small>`:(l.packs>1?` <small>${l.packs} × ${l.pk}</small>`:` <small>${l.pk}</small>`)}</span><span class="r-lead"></span><span class="r-price">${fmt(l.cost)} kr</span></div>`).join("");
+
+  const linje=l=>`<div class="r-line"><span class="r-name">${l.navn}${l.los?` <small>${l.mengde}</small>`:(l.packs>1?` <small>${l.packs} × ${l.pk}</small>`:` <small>${l.pk}</small>`)}</span><span class="r-lead"></span><span class="r-price">${fmt(l.cost)} kr</span></div>`;
+  const radAlt=alt.lines.map(linje).join("");
+  const radKjop=kjop.lines.map(linje).join("");
+  const harHjemme=(kjop.dekket||[]).map(d=>`<div class="dek-line">✓ ${escapeHtml(d.navn)}</div>`).join("");
+
   return `${missing>0?`<div class="wk-empty" style="margin-bottom:12px;">${missing} rett${missing>1?"er":""} fra denne uka finnes ikke lenger i databasen og vises ikke.</div>`:""}
     <div class="wk-meals">${meals}</div>
-    <div class="section-h" style="margin-top:18px;"><h2>Handleliste</h2><span class="meta">${shop.lines.length} varer · ${p} pers</span></div>
-    <div class="receipt"><div class="r-head"><div class="store">Vekes</div><div class="sub">Handleliste · veiledende priser</div></div>
-    ${rows}<div class="r-total"><span class="t-lab">TOTALT</span><span class="t-val num">${fmt(shop.total)} kr</span></div></div>`;
+
+    <div class="section-h" style="margin-top:18px;"><h2>Alt uka trenger</h2><span class="meta">${alt.lines.length} varer · ${p} pers</span></div>
+    <p class="psub" style="margin-top:-4px;">Hele ingrediensbehovet for uka — det du bruker når du lager maten.</p>
+    <div class="receipt"><div class="r-head"><div class="store">Vekes</div><div class="sub">Ingredienser · veiledende priser</div></div>
+    ${radAlt}<div class="r-total"><span class="t-lab">TOTALT</span><span class="t-val num">${fmt(alt.total)} kr</span></div></div>
+
+    <div class="section-h" style="margin-top:22px;"><h2>Handleliste</h2><span class="meta">${kjop.lines.length} varer å kjøpe</span></div>
+    <p class="psub" style="margin-top:-4px;">Det du faktisk må handle nå — regnet mot beholdningen din slik den er i dag.</p>
+    ${kjop.lines.length?`<div class="receipt"><div class="r-head"><div class="store">Vekes</div><div class="sub">Handleliste · veiledende priser</div></div>
+    ${radKjop}<div class="r-total"><span class="t-lab">TOTALT</span><span class="t-val num">${fmt(kjop.total)} kr</span></div>
+    ${harHjemme?`<div class="dek-head">HAR DU HJEMME — IKKE HANDLE</div>${harHjemme}`:""}</div>`
+    :`<div class="wk-empty">Du har alt du trenger hjemme til denne uka.</div>`}`;
 };
 
 // Beregner hvor mye av beholdningen en lagret uke bruker («Bruk denne menyen» i Mine uker).
