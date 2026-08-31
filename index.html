@@ -1181,14 +1181,26 @@ async function buildPlan(state){
   const filterOk=r=> (NIVA_RANK[r.niva]||1)<=fNiva && (!r.tid||r.tid<=fTid) && (fKj.length===0||fKj.includes(r.kjokken));
   const okF=r=> ok(r) && filterOk(r);
   // Poolen til frie valg respekterer diett, allergier og filter; låste retter sjekkes mot samme regel.
+  // To retter er «omtrent samme rett» når de deler det meste av ingrediensene
+  // (fiskegrateng vs. fiskegrateng med makaroni). Fisk to dager er greit —
+  // samme rett to dager er det ikke. Nicklas' observasjon.
+  const LIKHET_GRENSE=0.6;
+  const ingSet=r=>new Set((r.ing||[]).map(([id])=>id));
+  const likhet=(a,b)=>{
+    const A=ingSet(a), B=ingSet(b);
+    if(!A.size||!B.size) return 0;
+    let felles=0; A.forEach(id=>{ if(B.has(id)) felles++; });
+    return felles/Math.min(A.size,B.size);   // andel av den minste retten
+  };
+  const forLik=(r,valgte)=>valgte.some(v=>v&&likhet(r,v)>=LIKHET_GRENSE);
+
   const pool=RECIPES.filter(okF);
   const warn = pool.length===0 ? "tom" : (pool.length<N ? "faa" : null);
   // Ingen trygge retter i det hele tatt -> ikke server noe utrygt; gi tydelig beskjed i stedet.
   if(pool.length===0){
     return {plan:[],goal:interp.goal,pref,vegOnly,veganOnly,dietMode,avoid,warn:"tom",daily,note:interp.note,constraints:cons,source:interp.source};
   }
-  const ss=pool.map(r=>scoreRecipe(r,pref,daily));
-  const spenn=(Math.max(...ss)-Math.min(...ss))||1;
+  const ss=pool.map(r=>scoreRecipe(r,pref,daily));  const spenn=(Math.max(...ss)-Math.min(...ss))||1;
   const jitter=spenn*0.35;
   // Bruker du «har hjemme», løftes retter som utnytter varene dine.
   const hjemmeVekt = state.brukHarHjemme ? spenn*1.5 : 0;
@@ -1216,7 +1228,7 @@ async function buildPlan(state){
     let need=tm.count-have;
     if(need<=0) continue;
     const cands=pool.filter(r=>r.tag===tm.tag&&!used.has(r.id)).map(r=>({r,s:scoreOf(r)})).sort((a,b)=>b.s-a.s);
-    for(const c of cands){ if(need<=0)break; const slot=firstFree(); if(slot<0)break; slots[slot]=c.r; used.add(c.r.id); need--; }
+    for(const c of cands){ if(need<=0)break; if(forLik(c.r,slots))continue; const slot=firstFree(); if(slot<0)break; slots[slot]=c.r; used.add(c.r.id); need--; }
   }
 
   // 3) Fyll resten etter skår, med variasjon på type.
@@ -1225,12 +1237,15 @@ async function buildPlan(state){
   const capFor=tag=> (tag in tagCap) ? tagCap[tag] : maxPerTag;
   const tagCount={}; slots.forEach(r=>{ if(r) tagCount[r.tag]=(tagCount[r.tag]||0)+1; });
   const ranked=pool.filter(r=>!used.has(r.id)).map(r=>({r,s:scoreOf(r)})).sort((a,b)=>b.s-a.s);
-  for(const c of ranked){ const slot=firstFree(); if(slot<0)break; if((tagCount[c.r.tag]||0)>=capFor(c.r.tag))continue; slots[slot]=c.r; used.add(c.r.id); tagCount[c.r.tag]=(tagCount[c.r.tag]||0)+1; }
+  for(const c of ranked){ const slot=firstFree(); if(slot<0)break; if((tagCount[c.r.tag]||0)>=capFor(c.r.tag))continue; if(forLik(c.r,slots))continue; slots[slot]=c.r; used.add(c.r.id); tagCount[c.r.tag]=(tagCount[c.r.tag]||0)+1; }
 
-  // 4) Hvis variasjonsregelen lot noen slots stå tomme: fyll med rester, til slutt gjentakelser
+  // 4) Hvis variasjonsregelen lot noen slots stå tomme: fyll med rester.
+  //    Prøv først en rett som IKKE ligner de valgte; bare hvis ingen finnes,
+  //    godta en lignende (bedre med mat på bordet enn en tom dag).
   for(let i=0;i<N;i++){
     if(slots[i]!==null) continue;
-    let r=pool.find(x=>!used.has(x.id));
+    let r=pool.find(x=>!used.has(x.id)&&!forLik(x,slots));
+    if(!r) r=pool.find(x=>!used.has(x.id));
     if(!r) r=pool[Math.floor(Math.random()*pool.length)];
     slots[i]=r; if(r) used.add(r.id);
   }
@@ -1534,6 +1549,13 @@ function swapDinner(idx){
   let pool=RECIPES.filter(r=>ok(r)&&!used.has(r.id));
   if(!pool.length)pool=RECIPES.filter(ok);
   if(!pool.length) return;
+  // Samme regel som i motoren: ikke bytt inn en rett som er omtrent lik de andre i uka.
+  const ingSet=r=>new Set((r.ing||[]).map(([id])=>id));
+  const likhet=(a,b)=>{ const A=ingSet(a),B=ingSet(b); if(!A.size||!B.size)return 0;
+    let f=0; A.forEach(id=>{ if(B.has(id)) f++; }); return f/Math.min(A.size,B.size); };
+  const andre=plan.filter((_,i)=>i!==idx);
+  const ulike=pool.filter(r=>!andre.some(v=>v&&likhet(r,v)>=0.6));
+  if(ulike.length) pool=ulike;
   const ranked=pool.map(r=>({r,s:scoreRecipe(r,pref,daily)})).sort((a,b)=>b.s-a.s);
   const top=ranked.slice(0,Math.min(4,ranked.length));
   plan[idx]=top[Math.floor(Math.random()*top.length)].r; render();
