@@ -84,7 +84,21 @@ protein_gryte — Proteingryte med linser og edamame — vegetar · vegansk
 Gyldige typer: kylling, storfe, svin, fisk, vegetar. Gyldige dager: mandag, tirsdag, onsdag, torsdag, fredag, lørdag, søndag.
 
 Schema:
-{"goal":"muskler"|"ned"|"holde","kcal":<daglig kaloribehov, tall>,"protein":<daglig gram, tall>,"carbs":<daglig gram, tall>,"fat":<daglig gram, tall>,"preference":"protein"|"karbo"|"billig"|"balansert","vegOnly":<boolean>,"veganOnly":<boolean>,"avoid":[<allergener som må unngås: "gluten","melk","egg","fisk","soya","nøtter","skalldyr","sesam","selleri">],"constraints":{"pinned":[{"day":"<ukedag>","recipeId":"<id fra listen>"}],"tagMin":[{"tag":"<type>","count":<tall>}]},"note":"<kort vennlig melding på norsk, maks 2 setninger>"}
+{"goal":"muskler"|"ned"|"holde","kcal":<daglig kaloribehov, tall>,"protein":<daglig gram, tall>,"carbs":<daglig gram, tall>,"fat":<daglig gram, tall>,"preference":"protein"|"karbo"|"billig"|"balansert","diet":"vegansk"|"vegetar"|"begge"|"unnga_kjottfri"|"ingen","maxPerPortion":<maks kroner per porsjon som tall, eller null>,"vegOnly":<boolean>,"veganOnly":<boolean>,"avoid":[<allergener som må unngås: "gluten","melk","egg","fisk","soya","nøtter","skalldyr","sesam","selleri">],"constraints":{"pinned":[{"day":"<ukedag>","recipeId":"<id fra listen>"}],"tagMin":[{"tag":"<type>","count":<tall>}]},"note":"<kort vennlig melding på norsk, maks 2 setninger>"}
+
+KOSTHOLD ("diet") — les hva brukeren FAKTISK mener, også ved skrivefeil, dialekt og uvante formuleringer:
+- "vegansk": brukeren vil ha kun vegansk mat (ingen animalske produkter i det hele tatt).
+- "vegetar": brukeren vil ha vegetarmat med melk/ost/egg — altså kjøttfritt, men IKKE vegansk.
+- "begge": brukeren sier at både vegetar og vegansk er greit.
+- "unnga_kjottfri": brukeren sier uttrykkelig NEI til vegetar/vegansk, eller krever kjøtt/fisk i maten. Eksempler: "ikke vegetar eller vegansk", "vi er kjøttspisere", "ingen grønnsakmiddager", "vi må ha kjøtt hver dag", "ikke vagansk" (skrivefeil).
+- "ingen": brukeren sier ingenting om kosthold.
+VIKTIG: en nektelse foran et ord snur betydningen. "ikke vegetar" betyr "unnga_kjottfri", ALDRI "vegetar". Sett også vegOnly/veganOnly i tråd med dette (begge false ved "unnga_kjottfri" og "ingen").
+
+PRIS ("maxPerPortion") — sier brukeren noe om hva maten får koste, oppgi maks kroner PER PORSJON som tall:
+- "hold porsjonsprisen under 50 kr" -> 50. "maks 40 kroner per porsjon" -> 40.
+- Sier brukeren noe om pris per MIDDAG eller per uke, regn om til per porsjon ut fra antall personer hvis det er nevnt; er du usikker, oppgi null og sett preference "billig" i stedet.
+- Sier brukeren bare "billig" eller "vi har dårlig råd" uten et tall -> null, men preference "billig".
+- Nevnes ikke pris -> null.
 
 Regler for constraints (DETTE er det som faktisk styrer menyen — ikke bare nevn ønskene i note, legg dem inn her):
 - Vil brukeren ha en bestemt rett på en bestemt dag (f.eks. "taco på fredag") -> pinned med riktig recipeId og day.
@@ -93,7 +107,7 @@ Regler for constraints (DETTE er det som faktisk styrer menyen — ikke bare nev
 - Bruk KUN recipeId-er og typer fra listen over. Tomme lister [] hvis brukeren ikke har slike ønsker.
 - Er brukeren vegansk (veganOnly), pin KUN retter merket "vegansk" i lista.
 
-Sett ellers realistiske dagsverdier for en voksen, og vektlegg det brukeren sier (utholdenhet -> mer karbo; styrke/muskler -> mer protein; vektnedgang -> lavere kcal og goal ned; student/lite penger -> preference billig; vegetar (uten kjøtt og fisk, men ost og egg er ok) -> vegOnly true; vegansk eller plantebasert (INGEN animalske produkter, heller ikke ost, egg, melk, rømme, smør) -> veganOnly true).
+Sett ellers realistiske dagsverdier for en voksen, og vektlegg det brukeren sier (utholdenhet -> mer karbo; styrke/muskler -> mer protein; vektnedgang -> lavere kcal og goal ned; student/lite penger -> preference billig). Kosthold styres av "diet"-feltet beskrevet over.
 
 ALLERGIER er viktig for sikkerhet. Legg allergener brukeren ikke tåler i "avoid"-lista. Tolk vanlige norske uttrykk: cøliaki/glutenintoleranse/glutenfri -> "gluten"; laktoseintolerant/melkeallergi/melkefri -> "melk"; eggallergi -> "egg"; fiskeallergi -> "fisk"; soyaallergi -> "soya"; nøtteallergi/peanøttallergi -> "nøtter"; skalldyrallergi -> "skalldyr". Er du i tvil om brukeren nevner en allergi, ta den heller med enn å utelate den. La "avoid" være tom [] hvis ingen allergier nevnes.
 
