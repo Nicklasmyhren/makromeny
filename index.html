@@ -1118,10 +1118,33 @@ function detectAllergies(text){
 }
 /* Deterministisk diett-leser (sikkerhetsnett, som allergier). Skiller de tre tilfellene:
    'vegansk' = kun vegansk · 'vegetar' = kjøttfri MEN ikke vegansk · 'begge' = alt kjøttfritt. */
+// Sier brukeren uttrykkelig NEI til vegetar/vegansk? Da skal ingenting overstyre det.
+function dietAvvist(text){
+  const t=(text||"").toLowerCase();
+  return /(ikke|ingen|uten|unngå|unnga|vil ikke ha|ønsker ikke|onsker ikke|nei til)[^.!?;]{0,40}(vegetar|vegansk|vegan|kjøttfri|kjottfri|plantebasert)/.test(t)
+      || /(vegetar|vegansk|vegan|kjøttfri|kjottfri|plantebasert)[^.!?;]{0,25}(er uaktuelt|går ikke|gar ikke|nei takk)/.test(t)
+      || /(må|ma|skal|vil)[^.!?;]{0,20}(ha|inneholde)[^.!?;]{0,20}(kjøtt|kjott|fisk)/.test(t);
+}
+
 function detectDiet(text){
   const t=(text||"").toLowerCase();
-  const harVegan=/(vegansk|veganer|vegan|plantebasert|helt plantebasert|uten animalsk)/.test(t);
-  const harVegetar=/(vegetar|vegetarian|kjøttfri|kjottfri|uten kjøtt|uten kjott|kjøttfritt|kjottfritt)/.test(t);
+  const VEGAN=/(vegansk|veganer|vegan|plantebasert|uten animalsk)/;
+  const VEGETAR=/(vegetar|vegetarian|kjøttfri|kjottfri|uten kjøtt|uten kjott|kjøttfritt|kjottfritt)/;
+  // «Vi ønsker IKKE vegetar» skal ikke bli lest som et ønske OM vegetar.
+  // Vi ser etter nektelse rett foran ordet (opptil ~30 tegn, som dekker «ikke ha noe»,
+  // «vil ikke ha», «uten» osv.) og på tvers av «eller»-lister: «ikke vegetar eller vegansk».
+  const NEKT=/(ikke|ingen|unngå|unnga|slipp|uten|nei til|vil ikke|ønsker ikke|onsker ikke|foretrekker ikke)/;
+  const nektetFor=(re)=>{
+    const m=re.exec(t); if(!m) return false;
+    const foran=t.slice(Math.max(0,m.index-40), m.index);
+    if(!NEKT.test(foran)) return false;
+    // Nektelsen skal ikke være «avbrutt» av et nytt utsagn (punktum eller «men»)
+    const etterNekt=foran.slice(foran.search(NEKT));
+    return !/[.!?;]|(\bmen\b)/.test(etterNekt);
+  };
+  const veganNektet=nektetFor(VEGAN), vegetarNektet=nektetFor(VEGETAR);
+  const harVegan=VEGAN.test(t)&&!veganNektet;
+  const harVegetar=VEGETAR.test(t)&&!vegetarNektet;
   if(harVegan && harVegetar) return "begge";
   if(harVegan) return "vegansk";
   if(harVegetar) return "vegetar";
@@ -1130,8 +1153,10 @@ function detectDiet(text){
 /* regelbasert fallback (hvis API utilgjengelig, f.eks offline-deploy) */
 function interpretLocal(text,state){
   const t=(text||"").toLowerCase(); let goal=null,pref=null,vegOnly=false,veganOnly=false;
-  if(/(vegansk|veganer|vegan|plantebasert|helt plantebasert|uten animalsk)/.test(t)){ veganOnly=true; vegOnly=true; }
-  else if(/(vegetar|kjøttfri|kjottfri|uten kjøtt|uten kjott)/.test(t)) vegOnly=true;
+  // Bruk samme diett-tolkning som ellers, så «ikke vegetar» respekteres også her.
+  const dm=detectDiet(text);
+  if(dm==="vegansk"){ veganOnly=true; vegOnly=true; }
+  else if(dm==="vegetar"||dm==="begge") vegOnly=true;
   if(/(muskl|styrke|bygge|løfte|lofte|gym|masse|protein)/.test(t)){goal="muskler";pref="protein";}
   if(/(ned i vekt|gå ned|ga ned|slank|kalori|deficit|underskudd)/.test(t)) goal="ned";
   if(/(løp|lop|kondis|sykl|sykk|maraton|utholden)/.test(t)){ if(!goal)goal="holde"; }
@@ -1166,8 +1191,14 @@ async function buildPlan(state){
 
   // Diett: deterministisk lesing av teksten er autoritet (som allergier). Claude er mild reserve når teksten ikke sier noe eksplisitt.
   let dietMode=detectDiet(text);
-  if(!dietMode && veganOnly) dietMode="vegansk";
-  else if(!dietMode && vegOnly) dietMode="begge";
+  // Har brukeren uttrykkelig sagt NEI til kjøttfri kost, skal verken Claude eller
+  // profilvalg kunne overstyre det. («Vi ønsker ikke vegetar eller vegansk».)
+  const avvisterKjottfri=dietAvvist(text);
+  if(avvisterKjottfri) dietMode=null;
+  else{
+    if(!dietMode && veganOnly) dietMode="vegansk";
+    else if(!dietMode && vegOnly) dietMode="begge";
+  }
   // 'vegansk' = kun vegansk · 'vegetar' = kjøttfri men IKKE vegansk · 'begge' = alt kjøttfritt · ellers alt.
   const dietOk=r=> dietMode==="vegansk" ? r.vegan
                  : dietMode==="vegetar" ? (r.veg && !r.vegan)
