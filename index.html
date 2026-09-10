@@ -1094,8 +1094,12 @@ function normalize(o,source){
   const pref = prefs.includes(o.preference)?o.preference:"balansert";
   const clamp=(v,lo,hi,d)=>{ v=Number(v); return isFinite(v)?Math.min(hi,Math.max(lo,v)):d; };
   const avoid = Array.isArray(o.avoid) ? [...new Set(o.avoid.map(a=>String(a).toLowerCase()).filter(a=>validAllergen.has(a)))] : [];
+  const dietVerdier=["vegansk","vegetar","begge","unnga_kjottfri","ingen"];
+  const diet = dietVerdier.includes(o.diet) ? o.diet : "ingen";
+  const maxPP = (o.maxPerPortion==null||o.maxPerPortion==="") ? null : clamp(o.maxPerPortion,10,500,null);
   return {
     goal, preference:pref, vegOnly:(!!o.vegOnly||!!o.veganOnly), veganOnly:!!o.veganOnly, avoid,
+    diet, maxPerPortion:maxPP,
     kcal:clamp(o.kcal,1200,4000,GOAL_TARGET[goal].kcal),
     p:clamp(o.protein,60,260,GOAL_TARGET[goal].p),
     k:clamp(o.carbs,50,520,GOAL_TARGET[goal].k),
@@ -1189,20 +1193,25 @@ async function buildPlan(state){
   const cons=interp.constraints||{pinned:[],tagMin:[]};
   const N=state.dinners, maxPerTag=Math.max(2,Math.ceil(N/3));
 
-  // Diett: deterministisk lesing av teksten er autoritet (som allergier). Claude er mild reserve når teksten ikke sier noe eksplisitt.
-  let dietMode=detectDiet(text);
-  // Har brukeren uttrykkelig sagt NEI til kjøttfri kost, skal verken Claude eller
-  // profilvalg kunne overstyre det. («Vi ønsker ikke vegetar eller vegansk».)
-  const avvisterKjottfri=dietAvvist(text);
-  if(avvisterKjottfri) dietMode=null;
-  else{
-    if(!dietMode && veganOnly) dietMode="vegansk";
+  // Kosthold: Claude FORSTÅR teksten og bestemmer — koden gjetter ikke på ord.
+  // Den deterministiske lesingen brukes kun når Claude ikke var tilgjengelig (offline).
+  let dietMode=null;
+  if(interp.source==="regel"){                 // offline-fallback: bruk tekstlesing
+    dietMode=detectDiet(text);
+    if(dietAvvist(text)) dietMode=null;
+    else if(!dietMode && veganOnly) dietMode="vegansk";
     else if(!dietMode && vegOnly) dietMode="begge";
+  }else{
+    const d=interp.diet||"ingen";
+    dietMode = (d==="vegansk"||d==="vegetar"||d==="begge") ? d : null;
   }
-  // 'vegansk' = kun vegansk · 'vegetar' = kjøttfri men IKKE vegansk · 'begge' = alt kjøttfritt · ellers alt.
+  const unngaKjottfri = interp.source!=="regel" ? (interp.diet==="unnga_kjottfri") : dietAvvist(text);
+  // 'vegansk' = kun vegansk · 'vegetar' = kjøttfri men IKKE vegansk · 'begge' = alt kjøttfritt
+  // 'unngaKjottfri' = velg BORT kjøttfrie retter (brukeren sa uttrykkelig nei) · ellers alt.
   const dietOk=r=> dietMode==="vegansk" ? r.vegan
                  : dietMode==="vegetar" ? (r.veg && !r.vegan)
                  : dietMode==="begge"   ? r.veg
+                 : unngaKjottfri        ? !r.veg
                  : true;
   // Allergi-sjekk: bærende allergen -> retten er utrygg (filtreres bort). Tilpassbart -> behold, varsle.
   const avoid=Array.isArray(interp.avoid)?interp.avoid.filter(a=>a in ALLERGENER):[];
@@ -1213,6 +1222,17 @@ async function buildPlan(state){
   const fNiva=Number(state.fNiva)||4, fTid=Number(state.fTid)||90, fKj=Array.isArray(state.fKjokken)?state.fKjokken:[];
   const filterOk=r=> (NIVA_RANK[r.niva]||1)<=fNiva && (!r.tid||r.tid<=fTid) && (fKj.length===0||fKj.includes(r.kjokken));
   const okF=r=> ok(r) && filterOk(r);
+  // Prisgrense per porsjon (Claude tolker «hold porsjonsprisen under 50 kr» -> 50).
+  // Er grensen for stram til å fylle uka, sier vi ærlig fra i stedet for å bryte den i stillhet.
+  const maxPP = Number(interp.maxPerPortion)||0;
+  const innenforPris = r=> !maxPP || ((STATS[r.id]||{}).cost||0) <= maxPP;
+  let prisVarsel=null;
+  if(maxPP){
+    const raad=RECIPES.filter(r=>okF(r)&&innenforPris(r)).length;
+    if(raad===0) prisVarsel="pris_tom";
+    else if(raad<N) prisVarsel="pris_faa";
+  }
+  const okPris = r=> okF(r) && (prisVarsel==="pris_tom" ? true : innenforPris(r));
   // Poolen til frie valg respekterer diett, allergier og filter; låste retter sjekkes mot samme regel.
   // To retter er «omtrent samme rett» når de deler det meste av ingrediensene
   // (fiskegrateng vs. fiskegrateng med makaroni). Fisk to dager er greit —
@@ -1227,7 +1247,7 @@ async function buildPlan(state){
   };
   const forLik=(r,valgte)=>valgte.some(v=>v&&likhet(r,v)>=LIKHET_GRENSE);
 
-  const pool=RECIPES.filter(okF);
+  const pool=RECIPES.filter(okPris);
   const warn = pool.length===0 ? "tom" : (pool.length<N ? "faa" : null);
   // Ingen trygge retter i det hele tatt -> ikke server noe utrygt; gi tydelig beskjed i stedet.
   if(pool.length===0){
@@ -1290,7 +1310,7 @@ async function buildPlan(state){
   }); });
   const advarslerObj={}; Object.keys(advarsler).forEach(a=>advarslerObj[a]=[...advarsler[a]]);
 
-  return {plan:slots,goal:interp.goal,pref,vegOnly,veganOnly,dietMode,avoid,warn,advarsler:advarslerObj,daily,note:interp.note,constraints:cons,source:interp.source};
+  return {plan:slots,goal:interp.goal,pref,vegOnly,veganOnly,dietMode,unngaKjottfri,maxPP,prisVarsel,avoid,warn,advarsler:advarslerObj,daily,note:interp.note,constraints:cons,source:interp.source};
 }
 
 /* ---------- HANDLELISTE ---------- */
@@ -1469,7 +1489,7 @@ function showLoading(){
   el.innerHTML=`<div class="loading"><span class="spinner"></span> Claude leser hverdagen din og setter målene…</div>`;
 }
 function render(){
-  const {plan,goal,pref,daily,note,source,vegOnly,veganOnly,avoid,warn,advarsler,constraints}=state.current,persons=state.persons,N=plan.length;
+  const {plan,goal,pref,daily,note,source,vegOnly,veganOnly,avoid,warn,advarsler,constraints,unngaKjottfri,maxPP,prisVarsel}=state.current,persons=state.persons,N=plan.length;
 
   // Ingen trygge retter (for streng kombinasjon av diett/allergier) -> tydelig beskjed, ingen utrygg mat.
   if(!plan.length){
@@ -1500,9 +1520,15 @@ function render(){
       constraints.pinned.forEach(p=>{ const r=RECIPES.find(x=>x.id===p.recipeId); if(r) chips.push(`✓ ${capDay(p.day)}: ${r.navn}`); });
       constraints.tagMin.forEach(tm=>chips.push(`✓ ${tm.count}× ${TAG_LABEL[tm.tag]||tm.tag}`));
     }
+    if(unngaKjottfri) chips.push("✓ Uten vegetar/vegansk");
+    if(maxPP) chips.push(`✓ Maks ${maxPP} kr per porsjon`);
+    {
+    }
     box.innerHTML=`<div class="lab"><span class="dot"></span>${labTxt}</div>
       ${note?`<div class="note">${note}</div>`:""}
       ${warn==="faa"?`<div class="note" style="color:var(--kroner)">Få retter passer alle valgene dine, så noen retter gjentas denne uka.</div>`:""}
+      ${prisVarsel==="pris_tom"?`<div class="note" style="color:var(--kroner)">Ingen retter holder seg under ${maxPP} kr per porsjon, så prisgrensen er sett bort fra denne uka.</div>`:""}
+      ${prisVarsel==="pris_faa"?`<div class="note" style="color:var(--kroner)">Få retter holder seg under ${maxPP} kr per porsjon, så noen retter kan gjenta seg.</div>`:""}
       <div class="chips">${chips.map(c=>`<span class="chip">${c}</span>`).join("")}</div>`;
     el.appendChild(box);
   }
