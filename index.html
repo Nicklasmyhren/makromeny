@@ -1222,17 +1222,10 @@ async function buildPlan(state){
   const fNiva=Number(state.fNiva)||4, fTid=Number(state.fTid)||90, fKj=Array.isArray(state.fKjokken)?state.fKjokken:[];
   const filterOk=r=> (NIVA_RANK[r.niva]||1)<=fNiva && (!r.tid||r.tid<=fTid) && (fKj.length===0||fKj.includes(r.kjokken));
   const okF=r=> ok(r) && filterOk(r);
-  // Prisgrense per porsjon (Claude tolker «hold porsjonsprisen under 50 kr» -> 50).
-  // Er grensen for stram til å fylle uka, sier vi ærlig fra i stedet for å bryte den i stillhet.
+  // Prisgrense måles på den EKTE handlelista (total / porsjoner), ikke per rett —
+  // fordi hele pakker deles mellom retter. Sjekkes etter at uka er satt sammen.
   const maxPP = Number(interp.maxPerPortion)||0;
-  const innenforPris = r=> !maxPP || ((STATS[r.id]||{}).cost||0) <= maxPP;
-  let prisVarsel=null;
-  if(maxPP){
-    const raad=RECIPES.filter(r=>okF(r)&&innenforPris(r)).length;
-    if(raad===0) prisVarsel="pris_tom";
-    else if(raad<N) prisVarsel="pris_faa";
-  }
-  const okPris = r=> okF(r) && (prisVarsel==="pris_tom" ? true : innenforPris(r));
+  let prisVarsel=null, prisFaktisk=null;
   // Poolen til frie valg respekterer diett, allergier og filter; låste retter sjekkes mot samme regel.
   // To retter er «omtrent samme rett» når de deler det meste av ingrediensene
   // (fiskegrateng vs. fiskegrateng med makaroni). Fisk to dager er greit —
@@ -1247,7 +1240,7 @@ async function buildPlan(state){
   };
   const forLik=(r,valgte)=>valgte.some(v=>v&&likhet(r,v)>=LIKHET_GRENSE);
 
-  const pool=RECIPES.filter(okPris);
+  const pool=RECIPES.filter(okF);
   const warn = pool.length===0 ? "tom" : (pool.length<N ? "faa" : null);
   // Ingen trygge retter i det hele tatt -> ikke server noe utrygt; gi tydelig beskjed i stedet.
   if(pool.length===0){
@@ -1266,13 +1259,14 @@ async function buildPlan(state){
   const firstFree=()=>{ for(let i=0;i<N;i++) if(slots[i]===null) return i; return -1; };
 
   // 1) Lås retter til bestemte dager (taco på fredag osv.)
+  const pinnedIdx=new Set();   // disse byttes aldri bort av prisjusteringen
   for(const p of cons.pinned){
     const r=RECIPES.find(x=>x.id===p.recipeId);
     if(!r||used.has(r.id)||!ok(r)) continue;
     let idx=DAY_INDEX[p.day];
     if(idx==null||idx>=N||slots[idx]!==null) idx=firstFree();
     if(idx<0) continue;
-    slots[idx]=r; used.add(r.id);
+    slots[idx]=r; used.add(r.id); pinnedIdx.add(idx);
   }
 
   // 2) Oppfyll antallskrav per type (f.eks. minst to fiskemåltider)
@@ -1303,6 +1297,40 @@ async function buildPlan(state){
     slots[i]=r; if(r) used.add(r.id);
   }
 
+  // 5) Prisgrense: mål den EKTE handlelista (total / porsjoner). Er den for høy,
+  //    bytt ut den dyreste retten med en rimeligere og prøv igjen. Noen få runder.
+  if(maxPP){
+    const porsjoner=()=>Math.max(1,N*state.persons);
+    const listepris=(valgte)=>{
+      const p=valgte.filter(Boolean); if(!p.length) return 0;
+      const prev=state.brukHarHjemme; state.brukHarHjemme=false;
+      const s=buildShopping(p,state.persons);
+      state.brukHarHjemme=prev;
+      return s.total/porsjoner();
+    };
+    let naa=listepris(slots);
+    for(let runde=0; runde<12 && naa>maxPP; runde++){
+      // Finn retten som koster mest per porsjon — den er mest å hente på.
+      let verstIdx=-1, verstKost=-1;
+      slots.forEach((r,i)=>{ if(!r) return; const c=(STATS[r.id]||{}).cost||0;
+        if(c>verstKost && !pinnedIdx.has(i)){ verstKost=c; verstIdx=i; } });
+      if(verstIdx<0) break;
+      // Kandidater som er billigere, ikke i bruk, og ikke for like de andre.
+      const brukt=new Set(slots.filter(Boolean).map(r=>r.id));
+      const andre=slots.filter((_,i)=>i!==verstIdx);
+      const kandidater=pool
+        .filter(r=>!brukt.has(r.id) && ((STATS[r.id]||{}).cost||0) < verstKost && !forLik(r,andre))
+        .sort((a,b)=>((STATS[a.id]||{}).cost||0)-((STATS[b.id]||{}).cost||0));
+      if(!kandidater.length) break;
+      const forsok=slots.slice(); forsok[verstIdx]=kandidater[0];
+      const ny=listepris(forsok);
+      if(ny>=naa) break;                 // ingen forbedring — stopp heller enn å rote
+      slots[verstIdx]=kandidater[0]; naa=ny;
+    }
+    prisFaktisk=Math.round(naa);
+    if(naa>maxPP) prisVarsel="pris_ikke_naadd";
+  }
+
   // Samle varsler for tilpassbare allergener i de valgte rettene (til OBS-boksen).
   const advarsler={};
   slots.forEach(r=>{ if(!r) return; recipeAllergyInfo(r,avoid).warn.forEach(w=>{
@@ -1310,7 +1338,7 @@ async function buildPlan(state){
   }); });
   const advarslerObj={}; Object.keys(advarsler).forEach(a=>advarslerObj[a]=[...advarsler[a]]);
 
-  return {plan:slots,goal:interp.goal,pref,vegOnly,veganOnly,dietMode,unngaKjottfri,maxPP,prisVarsel,avoid,warn,advarsler:advarslerObj,daily,note:interp.note,constraints:cons,source:interp.source};
+  return {plan:slots,goal:interp.goal,pref,vegOnly,veganOnly,dietMode,unngaKjottfri,maxPP,prisVarsel,prisFaktisk,avoid,warn,advarsler:advarslerObj,daily,note:interp.note,constraints:cons,source:interp.source};
 }
 
 /* ---------- HANDLELISTE ---------- */
@@ -1489,7 +1517,7 @@ function showLoading(){
   el.innerHTML=`<div class="loading"><span class="spinner"></span> Claude leser hverdagen din og setter målene…</div>`;
 }
 function render(){
-  const {plan,goal,pref,daily,note,source,vegOnly,veganOnly,avoid,warn,advarsler,constraints,unngaKjottfri,maxPP,prisVarsel}=state.current,persons=state.persons,N=plan.length;
+  const {plan,goal,pref,daily,note,source,vegOnly,veganOnly,avoid,warn,advarsler,constraints,unngaKjottfri,maxPP,prisVarsel,prisFaktisk}=state.current,persons=state.persons,N=plan.length;
 
   // Ingen trygge retter (for streng kombinasjon av diett/allergier) -> tydelig beskjed, ingen utrygg mat.
   if(!plan.length){
@@ -1527,8 +1555,7 @@ function render(){
     box.innerHTML=`<div class="lab"><span class="dot"></span>${labTxt}</div>
       ${note?`<div class="note">${note}</div>`:""}
       ${warn==="faa"?`<div class="note" style="color:var(--kroner)">Få retter passer alle valgene dine, så noen retter gjentas denne uka.</div>`:""}
-      ${prisVarsel==="pris_tom"?`<div class="note" style="color:var(--kroner)">Ingen retter holder seg under ${maxPP} kr per porsjon, så prisgrensen er sett bort fra denne uka.</div>`:""}
-      ${prisVarsel==="pris_faa"?`<div class="note" style="color:var(--kroner)">Få retter holder seg under ${maxPP} kr per porsjon, så noen retter kan gjenta seg.</div>`:""}
+      ${prisVarsel==="pris_ikke_naadd"?`<div class="note" style="color:var(--kroner)">Vi klarte ikke å komme under ${maxPP} kr per porsjon med rettene som passer valgene dine — denne uka lander på ${prisFaktisk} kr. Prøv færre begrensninger, eller en litt høyere grense.</div>`:""}
       <div class="chips">${chips.map(c=>`<span class="chip">${c}</span>`).join("")}</div>`;
     el.appendChild(box);
   }
