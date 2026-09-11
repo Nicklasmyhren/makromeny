@@ -227,6 +227,39 @@
 
   /* admin-faner + Kassal-prisverktøy */
   .adm-tabs{display:flex;gap:8px;margin:0 0 18px;border-bottom:1px solid var(--line);}
+
+  /* ---------- TILBAKEMELDING ---------- */
+  .fb-fab{position:fixed;right:20px;bottom:20px;z-index:180;display:flex;align-items:center;gap:8px;
+    background:var(--spruce);color:#fff;border:none;border-radius:999px;padding:13px 20px;cursor:pointer;
+    font:inherit;font-size:14px;font-weight:600;box-shadow:0 6px 22px rgba(20,36,28,.28);
+    transition:transform .16s ease,box-shadow .16s ease;}
+  .fb-fab:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(20,36,28,.34);}
+  .fb-fab-ic{font-size:15px;}
+  @media (max-width:520px){ .fb-fab{right:14px;bottom:14px;padding:13px 15px;} .fb-fab-txt{display:none;} }
+
+  .fb-modal{position:fixed;inset:0;z-index:400;background:rgba(20,36,28,.45);display:flex;
+    align-items:center;justify-content:center;padding:18px;}
+  .fb-card{position:relative;background:var(--card);border-radius:var(--radius);box-shadow:0 20px 50px rgba(20,36,28,.3);
+    padding:26px 26px 22px;max-width:470px;width:100%;max-height:90vh;overflow:auto;}
+  .fb-card h3{font-family:'Bricolage Grotesque',sans-serif;font-size:19px;font-weight:800;margin:0 0 6px;color:var(--spruce);}
+  .fb-sub{font-size:13px;color:var(--muted);line-height:1.55;margin:0 0 16px;}
+  .fb-close{position:absolute;right:14px;top:10px;border:none;background:none;font-size:24px;line-height:1;
+    color:var(--muted);cursor:pointer;padding:4px 8px;}
+  .fb-close:hover{color:var(--ink);}
+  .fb-kat{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:13px;}
+  .fb-k{cursor:pointer;font:inherit;font-size:12.5px;padding:7px 13px;border:1px solid var(--line);
+    background:var(--card);border-radius:999px;color:var(--muted);transition:all .14s;}
+  .fb-k:hover{border-color:#cfe1ce;color:var(--ink);}
+  .fb-k.active{background:var(--spruce);border-color:var(--spruce);color:#fff;}
+  #fbTekst{width:100%;font:inherit;font-size:14px;padding:12px 13px;border:1px solid var(--line);
+    border-radius:10px;resize:vertical;line-height:1.55;}
+  #fbTekst:focus{outline:none;border-color:var(--spruce-2);}
+  .fb-msg{font-size:12.5px;margin-top:9px;min-height:17px;}
+  .fb-msg.ok{color:var(--spruce-2);} .fb-msg.err{color:#a33;}
+  .fb-actions{display:flex;gap:9px;margin-top:13px;align-items:center;}
+  .fb-hint{background:#f4f8f3;border:1px solid #d7e6d6;border-radius:12px;padding:14px 17px;margin-top:16px;
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .fb-hint p{margin:0;font-size:13px;color:var(--ink);flex:1;min-width:190px;}
   .adm-tab{cursor:pointer;font:inherit;font-size:13.5px;font-weight:600;background:none;border:none;
     padding:9px 15px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;}
   .adm-tab:hover{color:var(--ink);}
@@ -651,12 +684,19 @@
     <div class="adm-tabs">
       <button class="adm-tab active" data-admtab="fremgang">Fremgangsmåter</button>
       <button class="adm-tab" data-admtab="priser">Priser (Kassal)</button>
+      <button class="adm-tab" data-admtab="fb">Tilbakemeldinger</button>
     </div>
 
     <div id="admTab-fremgang">
       <p class="psub">Generer og godkjenn en fast fremgangsmåte for hver rett. Regelen: mengde-nøytral — ingen absolutte mengder, bare relative formuleringer. Steg som ser ut til å bryte regelen, markeres gult.</p>
       <p class="psub" id="admStatus"></p>
       <div class="adm-list" id="admList"></div>
+    </div>
+
+    <div id="admTab-fb" hidden>
+      <p class="psub">Tilbakemeldinger fra testerne dine, nyeste først.</p>
+      <p class="psub" id="fbAdmStatus"></p>
+      <div class="adm-list" id="fbAdmList"></div>
     </div>
 
     <div id="admTab-priser" hidden>
@@ -673,6 +713,31 @@
 </section>
 
 </main>
+
+<!-- Flytende tilbakemeldingsknapp — alltid tilgjengelig for innloggede testere -->
+<button class="fb-fab" id="fbFab" hidden title="Send tilbakemelding">
+  <span class="fb-fab-ic">✍</span><span class="fb-fab-txt">Tilbakemelding</span>
+</button>
+
+<div class="fb-modal" id="fbModal" hidden>
+  <div class="fb-card">
+    <button class="fb-close" id="fbClose" title="Lukk">×</button>
+    <h3>Hva tenker du?</h3>
+    <p class="fb-sub">Vekes er under utvikling, og ærlige tilbakemeldinger gjør den bedre. Det som ikke funker er like nyttig som det som gjør det.</p>
+    <div class="fb-kat" id="fbKat">
+      <button class="fb-k active" data-kat="feil">Noe virker ikke</button>
+      <button class="fb-k" data-kat="forslag">Forslag</button>
+      <button class="fb-k" data-kat="ros">Hva jeg likte</button>
+      <button class="fb-k" data-kat="annet">Annet</button>
+    </div>
+    <textarea id="fbTekst" rows="5" placeholder="Skriv så konkret du kan — f.eks. «da jeg gjorde X, skjedde Y»."></textarea>
+    <div class="fb-msg" id="fbMsg"></div>
+    <div class="fb-actions">
+      <button class="auth-btn" id="fbSend">Send inn</button>
+      <button class="swap" id="fbAvbryt">Avbryt</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ---------- NAVIGASJON (sider) ---------- */
@@ -1614,6 +1679,15 @@ function render(){
   useBar.innerHTML=`<button class="use-menu" id="useMenuBtn">Lagre meny</button><span class="use-menu-hint">${useHint}</span>`;
   el.appendChild(useBar);
 
+  // Oppfordring til tilbakemelding — rett etter at menyen er laget, da folk har en mening.
+  const fbBar=document.createElement("div");
+  fbBar.className="fb-hint";
+  fbBar.innerHTML=`<p>Hva synes du om denne uka? Vekes er under utvikling, og tilbakemeldingen din former den videre.</p>
+    <button class="swap" id="fbFraMeny">Si hva du mener</button>`;
+  el.appendChild(fbBar);
+  const fbm=document.getElementById("fbFraMeny");
+  if(fbm) fbm.addEventListener("click",()=>window.MM_openFeedback&&window.MM_openFeedback("forslag"));
+
   const umb=document.getElementById("useMenuBtn");
   if(umb) umb.addEventListener("click",async()=>{
     const ids=plan.map(r=>r.id);
@@ -1923,6 +1997,7 @@ function renderAuth(user){
   }
   const ob=$("openProfile"); if(ob) ob.hidden=!user;
   const na=$("navAdmin"); if(na) na.hidden=!user;
+  if(window.MM_visFeedbackKnapp) window.MM_visFeedbackKnapp(!!user);
 }
 
 /* ---------- PROFIL: hent og lagre ---------- */
@@ -2142,10 +2217,13 @@ function mmParseRecipeJSON(raw){
 // og kassal_id. Enhetsvekten (enhet_gram, som gir «3 løk») røres ALDRI — den er håndsatt.
 window.kasFane=function(navn){
   document.querySelectorAll("[data-admtab]").forEach(b=>b.classList.toggle("active",b.dataset.admtab===navn));
-  const f=document.getElementById("admTab-fremgang"), p=document.getElementById("admTab-priser");
+  const f=document.getElementById("admTab-fremgang"), p=document.getElementById("admTab-priser"),
+        b=document.getElementById("admTab-fb");
   if(f) f.hidden = navn!=="fremgang";
   if(p) p.hidden = navn!=="priser";
+  if(b) b.hidden = navn!=="fb";
   if(navn==="priser") window.MM_renderPriser();
+  if(navn==="fb") window.MM_renderFeedback();
   if(navn==="fremgang"&&window.MM_renderAdmin) window.MM_renderAdmin();
 }
 
@@ -2200,6 +2278,44 @@ async function kasOppdaterAlle(btn){
   </div>`;
   window.MM_renderPriser();
 }
+
+const FB_KAT={feil:"Virker ikke",forslag:"Forslag",ros:"Likte",annet:"Annet"};
+window.MM_renderFeedback=async function(){
+  const list=document.getElementById("fbAdmList"), st=document.getElementById("fbAdmStatus");
+  if(!list) return;
+  list.innerHTML=`<div class="loading-sm"><span class="spinner sp-dark"></span> Henter \u2026</div>`;
+  if(!supabase){ list.innerHTML=`<div class="wk-empty">Ingen forbindelse.</div>`; return; }
+  try{
+    const { data, error }=await supabase.from("tilbakemeldinger")
+      .select("id,epost,kategori,tekst,side,lest,opprettet")
+      .order("opprettet",{ascending:false});
+    if(error) throw error;
+    const rader=data||[];
+    const uleste=rader.filter(r=>!r.lest).length;
+    if(st) st.textContent=`${rader.length} tilbakemelding${rader.length===1?"":"er"}${uleste?` \u00b7 ${uleste} ulest${uleste===1?"":"e"}`:""}.`;
+    if(!rader.length){ list.innerHTML=`<div class="wk-empty">Ingen tilbakemeldinger enn\u00e5.</div>`; return; }
+    list.innerHTML="";
+    rader.forEach(r=>{
+      const d=new Date(r.opprettet);
+      const dato=isNaN(d)?"":`${d.getDate()}. ${MND_KORT[d.getMonth()]} kl. ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+      const el=document.createElement("div"); el.className="adm-row";
+      el.innerHTML=`<div class="adm-top">
+          <span class="adm-chip ${r.lest?"":"ok"}">${FB_KAT[r.kategori]||r.kategori}</span>
+          <span class="adm-name">${escapeHtml(r.epost||"ukjent")}</span>
+          <span class="wk-date">${dato}${r.side?` \u00b7 ${escapeHtml(r.side)}`:""}</span>
+          ${r.lest?"":`<button class="swap" data-fbles="${r.id}">Marker lest</button>`}
+        </div>
+        <div class="wk-dishes" style="white-space:pre-wrap;">${escapeHtml(r.tekst)}</div>`;
+      list.appendChild(el);
+    });
+    list.querySelectorAll("[data-fbles]").forEach(b=>b.addEventListener("click",async()=>{
+      b.disabled=true;
+      const { error }=await supabase.from("tilbakemeldinger").update({lest:true}).eq("id",b.dataset.fbles);
+      if(error){ b.disabled=false; b.textContent="Kunne ikke"; return; }
+      window.MM_renderFeedback();
+    }));
+  }catch(e){ list.innerHTML=`<div class="wk-empty">Kunne ikke hente: ${escapeHtml(e.message||String(e))}</div>`; }
+};
 
 window.MM_renderPriser=function(){
   const list=document.getElementById("prisList"), st=document.getElementById("prisStatus");
@@ -2617,6 +2733,65 @@ window.MM_renderAktivitet=async function(){
     html+=`<div class="stat-block"><h3>Uker brukt per måned</h3>${mndListe.map(([lab,v])=>statBar(lab,v,maks,String(v))).join("")}</div>`;
   }
   host.innerHTML=html; statTellOpp(host);
+};
+
+/* ---------- TILBAKEMELDING ---------- */
+// Lav terskel: alltid én knapp unna, kategori valgfri, ingenting mer kreves enn teksten.
+let fbKategori="feil";
+window.MM_openFeedback=function(kat){
+  const m=document.getElementById("fbModal"); if(!m) return;
+  if(kat) fbKategori=kat;
+  document.querySelectorAll(".fb-k").forEach(b=>b.classList.toggle("active",b.dataset.kat===fbKategori));
+  const msg=document.getElementById("fbMsg"); if(msg){ msg.className="fb-msg"; msg.textContent=""; }
+  m.hidden=false;
+  const t=document.getElementById("fbTekst"); if(t) setTimeout(()=>t.focus(),40);
+};
+function fbLukk(){ const m=document.getElementById("fbModal"); if(m) m.hidden=true; }
+
+async function fbSendInn(){
+  const t=document.getElementById("fbTekst"), msg=document.getElementById("fbMsg"), btn=document.getElementById("fbSend");
+  const tekst=(t?t.value:"").trim();
+  const sett=(k,s)=>{ if(msg){ msg.className="fb-msg "+k; msg.textContent=s; } };
+  if(tekst.length<3){ sett("err","Skriv litt mer, s\u00e5 skj\u00f8nner jeg hva du mener."); return; }
+  if(!supabase){ sett("err","Ingen forbindelse akkurat n\u00e5."); return; }
+  btn.disabled=true; btn.textContent="Sender \u2026";
+  try{
+    const { data:{ user } }=await supabase.auth.getUser();
+    if(!user){ sett("err","Du m\u00e5 v\u00e6re innlogget for \u00e5 sende tilbakemelding."); btn.disabled=false; btn.textContent="Send inn"; return; }
+    const side=(document.querySelector(".tb-link.is-here")||{}).textContent||"ukjent";
+    const { error }=await supabase.from("tilbakemeldinger").insert({
+      user_id:user.id, epost:user.email||null, kategori:fbKategori, tekst, side:side.trim()
+    });
+    if(error) throw error;
+    if(t) t.value="";
+    sett("ok","\u2713 Takk! Tilbakemeldingen er sendt \u2014 den betyr mye.");
+    btn.textContent="Send inn"; btn.disabled=false;
+    setTimeout(fbLukk,1500);
+  }catch(e){
+    sett("err","Kunne ikke sende: "+(e.message||e));
+    btn.disabled=false; btn.textContent="Send inn";
+  }
+}
+
+function fbInit(){
+  const fab=document.getElementById("fbFab");
+  if(fab&&!fab.dataset.bound){ fab.dataset.bound="1"; fab.addEventListener("click",()=>window.MM_openFeedback()); }
+  const c=document.getElementById("fbClose"), a=document.getElementById("fbAvbryt"),
+        s=document.getElementById("fbSend"), m=document.getElementById("fbModal");
+  if(c&&!c.dataset.bound){ c.dataset.bound="1"; c.addEventListener("click",fbLukk); }
+  if(a&&!a.dataset.bound){ a.dataset.bound="1"; a.addEventListener("click",fbLukk); }
+  if(s&&!s.dataset.bound){ s.dataset.bound="1"; s.addEventListener("click",fbSendInn); }
+  if(m&&!m.dataset.bound){ m.dataset.bound="1"; m.addEventListener("click",e=>{ if(e.target===m) fbLukk(); }); }
+  document.querySelectorAll(".fb-k").forEach(b=>{
+    if(b.dataset.bound) return; b.dataset.bound="1";
+    b.addEventListener("click",()=>{ fbKategori=b.dataset.kat;
+      document.querySelectorAll(".fb-k").forEach(x=>x.classList.toggle("active",x===b)); });
+  });
+}
+// Knappen vises kun for innloggede (testere), ikke p\u00e5 innloggingsskjermen.
+window.MM_visFeedbackKnapp=function(pa){
+  const fab=document.getElementById("fbFab"); if(fab) fab.hidden=!pa;
+  if(pa) fbInit();
 };
 
 /* ---------- MINE UKER ---------- */
