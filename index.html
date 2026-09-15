@@ -167,6 +167,37 @@
   .r-foot b{color:var(--spruce-2);}
 
   footer{border-top:1px solid var(--line);padding:18px 0 40px;font-size:12px;color:var(--muted);}
+
+  /* ---------- TESTVERSJON-STRIPE ---------- */
+  .beta-bar{position:relative;z-index:210;display:flex;align-items:center;gap:11px;flex-wrap:wrap;
+    background:var(--spruce);color:#fff;padding:9px 46px 9px 18px;font-size:13px;line-height:1.45;}
+  .beta-bar[hidden]{display:none;}
+  .beta-tag{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;font-weight:700;
+    background:var(--kroner);padding:3px 9px;border-radius:5px;white-space:nowrap;}
+  .beta-txt{flex:1;min-width:190px;opacity:.94;}
+  .beta-x{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;
+    color:#fff;opacity:.7;font-size:21px;line-height:1;cursor:pointer;padding:2px 7px;}
+  .beta-x:hover{opacity:1;}
+  @media (max-width:560px){ .beta-bar{font-size:12.5px;padding:9px 40px 9px 14px;} }
+
+  /* ---------- FOOTER ---------- */
+  .site-foot{border-top:1px solid var(--line);margin-top:40px;padding:20px 0 34px;}
+  .foot-in{max-width:1180px;margin:0 auto;padding:0 22px;display:flex;align-items:center;gap:9px;
+    flex-wrap:wrap;font-size:12px;color:var(--muted);}
+  .foot-sep{opacity:.5;}
+  .foot-link{background:none;border:none;font:inherit;font-size:12px;color:var(--muted);
+    cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px;}
+  .foot-link:hover{color:var(--spruce);}
+
+  /* ---------- PERSONVERN ---------- */
+  .pv{max-width:660px;}
+  .pv h3{font-family:'Bricolage Grotesque',sans-serif;font-size:15.5px;font-weight:700;
+    margin:24px 0 7px;color:var(--spruce);}
+  .pv p{font-size:14px;line-height:1.65;margin:0 0 11px;}
+  .pv b{color:var(--spruce);}
+  .callout-pv{background:#fbf6ee;border:1px solid #ecdcc4;border-radius:11px;padding:15px 18px;margin:24px 0 0;}
+  .callout-pv p{margin:0;font-size:13px;color:var(--ink);}
+  .pv-dato{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-top:18px;}
   footer b{color:var(--spruce-2);font-weight:600;}
   footer .num{color:var(--ink);}
 
@@ -473,6 +504,11 @@
 </style>
 </head>
 <body>
+<div class="beta-bar" id="betaBar">
+  <span class="beta-tag">TESTVERSJON</span>
+  <span class="beta-txt">Vekes er under utvikling. Noe kan være uferdig eller feil — og nettopp derfor er tilbakemeldingen din verdifull.</span>
+  <button class="beta-x" id="betaX" title="Skjul">×</button>
+</div>
 <header class="topbar">
   <div class="tb-wrap">
     <a class="tb-brand" href="#" data-nav="home"><h1>Veke<b>s</b></h1></a>
@@ -714,7 +750,53 @@
   </div>
 </section>
 
+<section class="page" id="page-personvern" hidden>
+  <div class="page-plain">
+    <h2>Personvern</h2>
+    <p class="psub">Kort og ærlig om hva Vekes lagrer om deg, og hvorfor.</p>
+
+    <div class="pv">
+      <h3>Hvem står bak</h3>
+      <p>Vekes er laget og drives av Nicklas Myhren som et privat utviklingsprosjekt. Det er ingen bedrift bak, og appen er i en tidlig testfase.</p>
+
+      <h3>Hva som lagres</h3>
+      <p>For at appen skal fungere, lagres dette om deg:</p>
+      <ul class="check">
+        <li><b>E-postadressen din</b> — fra invitasjonen, og brukes til innlogging.</li>
+        <li><b>Ukesmenyene du lager og lagrer</b> — hvilke retter, antall personer og valgene dine.</li>
+        <li><b>Det du legger inn i «Har hjemme»</b> — varene du sier du har i skapet.</li>
+        <li><b>Tilbakemeldinger du sender</b> — teksten, kategorien og e-posten din, så jeg kan følge opp.</li>
+      </ul>
+      <p>Passordet ditt lagres <b>ikke</b> av meg. Det håndteres kryptert av innloggingstjenesten (Supabase), og jeg kan aldri se det.</p>
+
+      <h3>Hvorfor</h3>
+      <p>Utelukkende for at Vekes skal virke for deg, og for å gjøre appen bedre. Dataene brukes ikke til reklame, selges ikke, og deles ikke med andre.</p>
+
+      <h3>Hvor det ligger</h3>
+      <p>Alt lagres hos <b>Supabase</b>, på servere i Europa. Nettsiden driftes av <b>Netlify</b>. Når du skriver fritekst om hverdagen din, sendes den teksten til <b>Anthropic (Claude)</b> for å tolkes til kalori- og makromål — den lagres ikke der.</p>
+
+      <h3>Hvem som ser det</h3>
+      <p>Bare du ser dine egne menyer og beholdning — det er sperret på databasenivå. Jeg som utvikler ser e-postadressene til de inviterte og tilbakemeldingene som sendes inn.</p>
+
+      <h3>Slik får du det slettet</h3>
+      <p>Si fra, så sletter jeg kontoen din og alt som er lagret om deg. Du kan når som helst be om å få vite hva som ligger lagret. Kontakt: <b>465 14 780</b>.</p>
+
+      <div class="callout-pv">
+        <p>Vekes er et privat prosjekt i tidlig fase, og denne teksten er skrevet så ærlig og enkelt som mulig — ikke av en jurist. Skulle Vekes en dag bli en ekte tjeneste med betaling, blir personvernet gjennomgått ordentlig først.</p>
+      </div>
+      <p class="pv-dato">Sist oppdatert 15. september 2026</p>
+    </div>
+  </div>
+</section>
 </main>
+
+<footer class="site-foot">
+  <div class="foot-in">
+    <span>Vekes — testversjon under utvikling</span>
+    <span class="foot-sep">·</span>
+    <button class="foot-link" data-nav="personvern">Personvern</button>
+  </div>
+</footer>
 
 <!-- Flytende tilbakemeldingsknapp — alltid tilgjengelig for innloggede testere -->
 <button class="fb-fab" id="fbFab" hidden title="Send tilbakemelding">
@@ -744,7 +826,7 @@
 <script>
 /* ---------- NAVIGASJON (sider) ---------- */
 (function(){
-  const PAGES={home:"page-home",plan:"page-plan",history:"page-history",stats:"page-stats","stats-okonomi":"page-stats-okonomi","stats-mat":"page-stats-mat","stats-ernaring":"page-stats-ernaring","stats-aktivitet":"page-stats-aktivitet",admin:"page-admin"};
+  const PAGES={home:"page-home",plan:"page-plan",history:"page-history",stats:"page-stats","stats-okonomi":"page-stats-okonomi","stats-mat":"page-stats-mat","stats-ernaring":"page-stats-ernaring","stats-aktivitet":"page-stats-aktivitet",admin:"page-admin",personvern:"page-personvern"};
   const nav=document.getElementById("tbNav");
   function goto(name){
     if(!PAGES[name]) return;
@@ -766,6 +848,16 @@
   }
   window.MM_goto=goto;
   document.querySelectorAll("[data-nav]").forEach(el=>el.addEventListener("click",e=>{ e.preventDefault(); goto(el.dataset.nav); }));
+
+  // Testversjon-stripa: lukkbar, og holder seg lukket resten av økten.
+  const bBar=document.getElementById("betaBar"), bX=document.getElementById("betaX");
+  if(bBar&&bX){
+    try{ if(sessionStorage.getItem("vekesBetaSkjult")==="1") bBar.hidden=true; }catch(e){}
+    bX.addEventListener("click",()=>{
+      bBar.hidden=true;
+      try{ sessionStorage.setItem("vekesBetaSkjult","1"); }catch(e){}
+    });
+  }
   const burger=document.getElementById("tbBurger");
   if(burger&&nav) burger.addEventListener("click",()=>nav.classList.toggle("open"));
 
